@@ -1,0 +1,15 @@
+	<key>precache</key>
+	<true/>
+	<key>preupgrade_alert</key>
+	<dict>
+		<key>alert_detail</key>
+		<string>The installation will not start until the user is logged out by the installer.
+
+The installation must be triggered a second time by selecting "Upgrade".</string>
+		<key>alert_title</key>
+		<string>Instructions for macOS upgrade</string>
+		<key>cancel_label</key>
+		<string>Abort</string>
+		<key>ok_label</key>
+		<string>Ok</string>
+	</dict>

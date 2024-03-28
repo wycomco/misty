@@ -1,0 +1,3 @@
+#!/bin/sh
+
+"/Applications/Install macOS %os_nice%.app/Contents/Resources/startosinstall" --usage

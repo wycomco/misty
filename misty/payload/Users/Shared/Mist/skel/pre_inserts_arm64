@@ -1,0 +1,15 @@
+	<key>precache</key>
+	<true/>
+	<key>preupgrade_alert</key>
+	<dict>
+		<key>alert_detail</key>
+		<string>If the installation does not start, please wait some minutes and try again.
+
+Follow the instructions of the installer. When entering the password, please enter your own password, even if an administrator password is requested. Please confirm the restart prompt. From then on, the update can run unattended.</string>
+		<key>alert_title</key>
+		<string>Instructions for macOS upgrade</string>
+		<key>cancel_label</key>
+		<string>Abort</string>
+		<key>ok_label</key>
+		<string>Ok</string>
+	</dict>

@@ -1,0 +1,27 @@
+	<key>localized_strings</key>
+	<dict>
+		<key>de</key>
+		<dict>
+			<key>category</key>
+			<string>Dienstprogramme</string>
+			<key>description</key>
+			<string>Lädt macOS Version %version%</string>
+			<key>description_staged</key>
+			<string>Installiert macOS Version %version%</string>
+			<key>preupgrade_alert</key>
+			<dict>
+				<key>alert_detail</key>
+				<string>Falls die Installation nicht startet, bitte einige Minuten warten und erneut versuchen.
+
+Bitte den Anweisungen des Installers folgen. Bei der Passworteingabe bitte das eigene Passwort eingeben, auch wenn ein Administratorpasswort verlangt wird. Der Aufforderung zum Neustart folgen. Ab dann kann das Update unbeaufsichtigt laufen.</string>
+				<key>alert_title</key>
+				<string>Anleitung zum macOS-Upgrade</string>
+				<key>cancel_label</key>
+				<string>Abbrechen</string>
+				<key>ok_label</key>
+				<string>Ok</string>
+			</dict>
+		</dict>
+		<key>fallback_locale</key>
+		<string>en</string>
+	</dict>

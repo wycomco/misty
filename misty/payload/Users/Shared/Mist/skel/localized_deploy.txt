@@ -1,0 +1,14 @@
+	<key>localized_strings</key>
+	<dict>
+		<key>de</key>
+		<dict>
+			<key>category</key>
+			<string>Dienstprogramme</string>
+			<key>description</key>
+			<string>Lädt macOS Version %version% und legt es für spätere Installation im Programme-Ordner ab.</string>
+			<key>display_name</key>
+			<string>macOS %version% Vorbereitung</string>
+		</dict>
+		<key>fallback_locale</key>
+		<string>en</string>
+	</dict>

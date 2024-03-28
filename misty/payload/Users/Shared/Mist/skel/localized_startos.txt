@@ -1,0 +1,25 @@
+	<key>localized_strings</key>
+	<dict>
+		<key>de</key>
+		<dict>
+			<key>category</key>
+			<string>Dienstprogramme</string>
+			<key>description</key>
+			<string>Installiert macOS Version %version%</string>
+			<key>preupgrade_alert</key>
+			<dict>
+				<key>alert_detail</key>
+				<string>Die Installation startet erst, wenn der Benutzer durch den Installer abgemeldet wird.
+
+Die Installation muss ein zweites Mal durch Auswählen von "Aktualisieren" angestoßen werden.</string>
+				<key>alert_title</key>
+				<string>Anleitung zum macOS-Upgrade</string>
+				<key>cancel_label</key>
+				<string>Abbrechen</string>
+				<key>ok_label</key>
+				<string>Ok</string>
+			</dict>
+		</dict>
+		<key>fallback_locale</key>
+		<string>en</string>
+	</dict>

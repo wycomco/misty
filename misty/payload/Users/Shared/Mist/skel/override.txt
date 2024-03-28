@@ -1,0 +1,16 @@
+# Please specify the absolute path to your munki repo
+RepoPath="/Users/Shared/munki_repo"
+# Please specify the sub directory where the munki objects should be placed, relative below pkgs and pkgsinfo from your munki repo
+munki_path="apple"
+# Please specify the item name as well as the file name
+munki_name="macos"
+# munki name used for provisioning scenarios
+deploy_name="deploy_macos"
+# Please specify the munki catalog(s) for the respective versions
+munki_catalog_12="testing"
+munki_catalog_13="testing"
+munki_catalog_14="testing"
+# Please specify the munki category
+munki_category="Utilities"
+# If turned to "yes", localizations will be used. If not present yet, copy the files starting with "localized_" from the skel/ dir into the usr/ folder and adjust to your needs
+localization="no"

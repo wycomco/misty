@@ -1,0 +1,12 @@
+	<key>localized_strings</key>
+	<dict>
+		<key>de</key>
+		<dict>
+			<key>category</key>
+			<string>Dienstprogramme</string>
+			<key>description</key>
+			<string>Lädt macOS Version %version%</string>
+		</dict>
+		<key>fallback_locale</key>
+		<string>en</string>
+	</dict>
