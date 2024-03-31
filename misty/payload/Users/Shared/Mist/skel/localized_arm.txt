@@ -5,7 +5,9 @@
 			<key>category</key>
 			<string>Dienstprogramme</string>
 			<key>description</key>
-			<string>Lädt macOS Version %version%</string>
+			<string>Bereitet die Installation von macOS Version %version% vor</string>
+			<key>display_name</key>
+			<string>macOS %os_nice% Bereitstellung</string>
 		</dict>
 		<key>fallback_locale</key>
 		<string>en</string>

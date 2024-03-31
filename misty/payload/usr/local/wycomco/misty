@@ -157,7 +157,7 @@ munkiimport_stage_os() {
 preloader_arm() {
     sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
-    --displayname="macOS $os_nice"  --description="Downloads macOS $os_nice $fqos"  \
+    --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
     --icon="$munki_name"_"$os_munki".png --minimum_munki_version=6.0.1 \
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --postinstall_script="$Template"/postinstall_script_installer \
@@ -187,7 +187,7 @@ EOF
 
 deploy_macos() {
     sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
-    -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice preparation"  \
+    -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice provisioning"  \
     --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
     --icon="$munki_name"_"$os_munki".png --minimum_munki_version=6.0.1 \
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
@@ -347,6 +347,7 @@ mv "$LogPath"/current_state_14.txt "$LogPath"/previous_state_14.txt
 mv "$LogPath"/current_state_13.txt "$LogPath"/previous_state_13.txt
 mv "$LogPath"/current_state_12.txt "$LogPath"/previous_state_12.txt
 
+# Run user-specific postinstall, if present
 if [[ -f "$Base_Path"/usr/postinstall.sh ]]; then
     "$Base_Path"/usr/postinstall.sh
 fi

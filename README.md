@@ -34,11 +34,12 @@ The script `misty` itself is located in `/usr/local/wycomo`.
 
 This script was tested with macOS 14 Sonoma. It should work with prior macOS versions, but this is has not been tested.
 
-You should at least have 40 GB of free disk space available during each run.
+You should at least have 60 GB of free disk space available during each run.
 
-## Known issues
+## To do
 
 This is a pre-release. It is working, but we have some tasks on our to do list:
 
 *  Automatically remove older versions of macOS from the repo. There is only one dmg that is used for all plists; however, a full installer requires space. Since we want to keep at least one version prior to the current one (testing vs production, ~~bugs~~ unwanted features in new release), we have to parse the directory for every specific major version and keep the two highest version numbers.
-*  Check for space left. We need to check the space on the munki repo, but more importantly, the space on the system disk.
+*  Check for space left. We need to check the space on the munki repo, but more importantly, the space on the system disk. After each run involving an installation, files are written to `/private/tmp/msu-target*/` that cannot be deleted by root. More testing needs to be done.
+*  LaunchAgent or LaunchDaemon. If the munki repo is not a local storage, we need a LaunchAgent to ensure that the user running this script can access the repo. On the other hand, a LaunchDaemon will run also if no user is logged in.
