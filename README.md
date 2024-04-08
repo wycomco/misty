@@ -53,6 +53,7 @@ You should at least have 60 GB of free disk space available during each run.
 
 This is a pre-release. It is working, but we have some tasks on our to do list:
 
+- mist-cli changes the release date, although version and build number remain the same. We need to extract only the build number for comparison. As long as this is not done, `rm_previous_files` will only list the files, but not delete them. Also, all files are being listed, not only the previous versions.
 - Check for space left. We need to check the space on the munki repo, but more importantly, the space on the system disk. After each run involving an installation, files are written to `/private/tmp/msu-target*/` that cannot be deleted by root. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads. More testing needs to be done.
 - LaunchAgent or LaunchDaemon. If the munki repo is not a local storage, we need a LaunchAgent to ensure that the user running this script can access the repo. On the other hand, a LaunchDaemon will run also if no user is logged in.
 - Add `/usr/local/wycomco` to logged in user's PATH
