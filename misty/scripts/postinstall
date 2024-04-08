@@ -1,4 +1,19 @@
 #!/bin/bash
-if [ ! -f /etc/paths.d/wycomco ]; then
-	echo "/usr/local/wycomco" > /etc/paths.d/wycomco
+
+MISTY_DIR="/usr/local/wycomco"
+
+if [[ ":$PATH:" != *":$MISTY_DIR:"* ]]; then
+    if [ -f "$HOME/.bash_profile" ]; then
+        echo 'export PATH="/usr/local/wycomco:$PATH"' >> "$HOME/.bash_profile"
+    elif [ -f "$HOME/.bashrc" ]; then
+        echo 'export PATH="/usr/local/wycomco:$PATH"' >> "$HOME/.bashrc"
+    elif [ -f "$HOME/.zshrc" ]; then
+        echo 'export PATH="/usr/local/wycomco:$PATH"' >> "$HOME/.zshrc"
+    else
+        osascript -e 'display alert "PATH variable could not be set" message "Unable to find appropriate shell configuration file. Please add '$MISTY_DIR' to your PATH manually to run misty."'
+        exit 1
+    fi
+    echo "Added '$MISTY_DIR' to your PATH."
+else
+    echo "'$MISTY_DIR' is already in your PATH."
 fi

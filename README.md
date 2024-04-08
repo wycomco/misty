@@ -53,8 +53,6 @@ You should at least have 60 GB of free disk space available during each run.
 
 This is a pre-release. It is working, but we have some tasks on our to do list:
 
-- Automatically remove older versions of macOS from the repo. There is only one dmg that is used for all plists; however, a full installer requires space. Since we want to keep at least one version prior to the current one (testing vs production, ~~bugs~~ unwanted features in new release), we have to parse the directory for the specific major version and keep only the highest version number of the item that will be created during the run.
 - Check for space left. We need to check the space on the munki repo, but more importantly, the space on the system disk. After each run involving an installation, files are written to `/private/tmp/msu-target*/` that cannot be deleted by root. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads. More testing needs to be done.
 - LaunchAgent or LaunchDaemon. If the munki repo is not a local storage, we need a LaunchAgent to ensure that the user running this script can access the repo. On the other hand, a LaunchDaemon will run also if no user is logged in.
-- Run `postinstall.sh` only if any new release is downloaded.
-- Adding script to `/etc/paths.d` requires a restart before script is recognized.
+- Add `/usr/local/wycomco` to logged in user's PATH
