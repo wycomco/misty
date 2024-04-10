@@ -9,9 +9,9 @@
 			<key>preupgrade_alert</key>
 			<dict>
 				<key>alert_detail</key>
-				<string>Die Installation startet erst, wenn der Benutzer durch den Installer abgemeldet wird.
+				<string>Die Installation muss ein zweites Mal durch Auswählen von "Aktualisieren" angestoßen werden.
 
-Die Installation muss ein zweites Mal durch Auswählen von "Aktualisieren" angestoßen werden.</string>
+Die Installation startet erst, wenn der Benutzer durch den Installer abgemeldet wird.</string>
 				<key>alert_title</key>
 				<string>Anleitung zum macOS-Upgrade</string>
 				<key>cancel_label</key>

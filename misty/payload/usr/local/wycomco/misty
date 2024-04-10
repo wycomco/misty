@@ -1,13 +1,33 @@
 #!/bin/zsh -e
 
-# This script checks for availability of new releases of macOS, starting from macOS Monterey,
-# using mist-cli (https://github.com/ninxsoft/mist-cli) and imports into munki.
+#   This script checks for availability of new releases of macOS, starting
+#   from macOS Monterey, using mist-cli (https://github.com/ninxsoft/mist-cli)
+#   and imports into munki.
+#
+#   Copyright 2024 by wycomco.
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 ##################################
 # Global definitions, first run  #
 ##################################
 
+export PATH="/usr/bin:/usr/local/bin:/usr/local/munki:$PATH"
+
+repo_required=14 # Size required on repo for single installer in GB
+diskspace_required=30 # Size required on boot disk for single installer in GB
 Base_Path="/Users/Shared/Mist"
 LogPath="$Base_Path/Logs"
 Template="$Base_Path/skel"
@@ -17,8 +37,8 @@ if [[ ! -d "$Base_Path/usr" ]]; then
     chmod 777 "$Base_Path/usr"
 fi
 if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
+    currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
     cp "$Template/override.txt" $Base_Path/usr
-    chmod 666 "$Base_Path/usr/override.txt"
     while true; do
         echo
         echo "Do you want to use localized strings in the resulting plists? (y/n)"
@@ -26,19 +46,27 @@ if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
         case $yn in
             [Yy]* )
             cp "$Template"/localized_arm.txt "$Template"/localized_deploy.txt "$Template"/localized_stage_os.txt "$Template"/localized_startos.txt "$Base_Path"/usr
-            chmod 666 "$Base_Path"/usr/localized_*.txt
             sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/override.txt
-            echo "Please adjust the files override.txt and any localized_*.txt in $Base_Path/usr to your needs and start the script again."
+            echo "Please adjust the file override.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
+            echo "A finder window will open in 5 seconds."
+            sleep 5
+            su -l "$currentUser" -c "open $Base_Path/usr"
             exit 0 ;;
             [Nn]* )
-            echo "Please adjust the file $Base_Path/usr/override.txt to your needs and start the script again."
+            echo "Please adjust the file $Base_Path/usr/override.txt to your needs now."
+            echo "A finder window will open in 5 seconds."
+            sleep 5
+            su -l "$currentUser" -c "open $Base_Path/usr"
             exit 0;;
             * ) echo "Please answer using [y] or [n].";;
         esac
     done
+    if ! launchctl list | grep -q "de.wycomco.misty"; then
+        launchctl load /Library/LaunchDaemons/de.wycomco.misty.plist
+    fi
 fi
 
-# Definitions from config file in /Users/Shared/Mist/usr
+# Load definitions from config file in /Users/Shared/Mist/usr
 source "$Base_Path"/usr/override.txt
 echo "RepoPath: $RepoPath" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
@@ -59,25 +87,25 @@ pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
 # Check environment              #
 ##################################
 
-mist_cmd=$(which mist)
+mist_check=$(which mist)
 if [ $? -ne 0 ]; then
-    echo "Error: mist not found. Please install mist-cli or put it into the PATH."
+    echo "Error: mist not found. Please install mist-cli or put it into the PATH." >&2
     exit 1
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
-    echo "Error: munkiimport not found. Please check your munki installation."
+    echo "Error: munkiimport not found. Please check your munki installation." >&2
     exit 1
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
-    echo "Error: The directory '$Template' either does not exist or is empty."
+    echo "Error: The directory '$Template' either does not exist or is empty." >&2
     exit 1
 fi
 if [[ ! -d "$RepoPath" ]]; then
-    echo "Error: Repository not accessible, please check."
+    echo "Error: Repository not accessible, please check." >&2
     exit 1
 fi
 if [[ $EUID -ne 0 ]]; then
@@ -99,6 +127,32 @@ fi
 # Functions                      #
 ##################################
 
+check_space() {
+    local repo_space bootdisk_space repo_disk bootdisk_disk total_required_space
+    repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
+    if (( repo_space < repo_required )); then
+        echo "Less than $repo_required GB space on repo left. Please provide more space." >&2
+        exit 1
+    fi
+
+    bootdisk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
+    bootdisk_space=$(df -k "$bootdisk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
+    if (( bootdisk_space < diskspace_required )); then
+        echo "Less than $diskspace_required GB space on boot volume left. Please provide more space." >&2
+        exit 1
+    fi
+
+    repo_disk=$(df -P "$RepoPath" | awk 'NR==2{print $1}')
+    bootdisk_disk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
+    if [[ "$repo_disk" == "$bootdisk_disk" ]]; then
+        total_required_space=$((repo_required + diskspace_required))
+        if (( repo_space + bootdisk_space < total_required_space )); then
+            echo "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space." >&2
+            exit 1
+        fi
+    fi
+}
+
 rm_previous_files() {
     local fqos_retired=()
     
@@ -114,8 +168,7 @@ rm_previous_files() {
             # Add the filename to fqos_retired array
             fqos_retired+=("$filename")
         fi
-    done
-    
+    done    
     # Loop through unique major versions
     for major_version in $(echo "${fqos_retired[@]}" | cut -d. -f1 | sort -u); do
         # Filter files based on major version
@@ -123,14 +176,13 @@ rm_previous_files() {
         # Sort files based on minor and patch version numbers in descending order
         major_files_sorted=($(printf '%s\n' "${major_files[@]}" | sort -rV))
         # Keep only the first element (highest minor and patch version)
-        major_files_sorted=("${(@)major_files_sorted:1}")
-    
+        major_files_sorted=("${(@)major_files_sorted:1}")    
         # Loop through major_files_sorted array and remove corresponding files
         for file in "${major_files_sorted[@]}"; do
-            ls -alh "${pkgsdir}"/*"${file}".*
-            ls -alh "${pkgsinfodir}"/*"${file}".*
-            ls -alh "${pkgsinfodir}"/arm64/*"${file}".*
-            ls -alh "${pkgsinfodir}"/x86_64/*"${file}".*
+            rm -f "${pkgsdir}"/*"${file}".dmg
+            rm -f "${pkgsinfodir}"/*"${file}".plist
+            rm -f "${pkgsinfodir}"/arm64/*"${file}".plist
+            rm -f "${pkgsinfodir}"/x86_64/*"${file}".plist
             echo "Removed version(s) ${file} from pkgs and pkgsinfo directories"
         done
     done
@@ -145,8 +197,13 @@ extract_macos_version() {
 }
 
 download_macos() {
-    # Reduce output, but maintain single steps for log file or interactive run (progress)
-    $mist_cmd download installer $os_major application --application-name "Install macOS $os_nice.app" --force | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
+    if [[ -t 1 ]]; then
+        # Reduce output, but output progress of single steps for interactive run
+        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
+    else
+        # If invoked by launchd, only print error messages to StandardErrorPath
+        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force > /dev/null 2>> /var/log/misty_error.log
+    fi
 }
 
 munkiimport_stage_os() {
@@ -277,31 +334,31 @@ munkiimport_startos() {
 ##################################
 
 # We want to check each major version seperately
-$mist_cmd list installer 14 --latest | grep GB > "$LogPath"/tmp_state_14.txt
-$mist_cmd list installer 13 --latest | grep GB > "$LogPath"/tmp_state_13.txt
-$mist_cmd list installer 12 --latest | grep GB > "$LogPath"/tmp_state_12.txt
+mist list installer 14 --latest | grep GB > "$LogPath"/tmp_state_14.txt
+mist list installer 13 --latest | grep GB > "$LogPath"/tmp_state_13.txt
+mist list installer 12 --latest | grep GB > "$LogPath"/tmp_state_12.txt
 
 # Remove color codes resulting from grep and clean up
 rm_color_codes "$LogPath"/tmp_state_14.txt > "$LogPath"/current_state_14.txt
 rm_color_codes "$LogPath"/tmp_state_13.txt > "$LogPath"/current_state_13.txt
 rm_color_codes "$LogPath"/tmp_state_12.txt > "$LogPath"/current_state_12.txt
-/bin/rm -f "$LogPath"/tmp_state_14.txt "$LogPath"/tmp_state_13.txt "$LogPath"/tmp_state_12.txt
+/bin/rm -f "$LogPath"/tmp_state_*.txt
 
-# Compare the content with the previous state or create initial state if it doesn't exist
+# Compare the content with the previous state if present, ignoring last two columns (date and compatibliity)
 if [ -f "$LogPath"/previous_state_14.txt ]; then
-    if ! cmp -s "$LogPath"/current_state_14.txt "$LogPath"/previous_state_14.txt; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/current_state_14.txt | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/previous_state_14.txt); then
         macos_14=$(extract_macos_version Sonoma "$LogPath"/current_state_14.txt)
     fi
 fi
 
 if [ -f "$LogPath"/previous_state_13.txt ]; then
-    if ! cmp -s "$LogPath"/current_state_13.txt "$LogPath"/previous_state_13.txt; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/current_state_13.txt | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/previous_state_13.txt); then
         macos_13=$(extract_macos_version Ventura "$LogPath"/current_state_13.txt)
     fi
 fi
 
 if [ -f "$LogPath"/previous_state_12.txt ]; then
-    if ! cmp -s "$LogPath"/current_state_12.txt "$LogPath"/previous_state_12.txt; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/current_state_12.txt | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/previous_state_12.txt); then
         macos_12=$(extract_macos_version Monterey "$LogPath"/current_state_12.txt)
     fi
 fi
@@ -319,6 +376,7 @@ if [ -n "$macos_14" ]; then
     os_mini="10.13"
     os_munki="sonoma"
     os_nice="Sonoma"
+    check_space
     rm_previous_files
     echo "Downloading installer for macOS $macos_14"
     download_macos
@@ -337,6 +395,7 @@ if [ -n "$macos_13" ]; then
     os_mini="10.12"
     os_munki="ventura"
     os_nice="Ventura"
+    check_space
     rm_previous_files
     echo "Downloading installer for macOS $macos_13"
     download_macos
@@ -355,6 +414,7 @@ if [ -n "$macos_12" ]; then
     os_mini="10.9"
     os_munki="monterey"
     os_nice="Monterey"
+    check_space
     rm_previous_files
     echo "Downloading installer for macOS $macos_12"
     download_macos
@@ -380,6 +440,9 @@ if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) && -f "$Base_Path"/
     "$Base_Path"/usr/postinstall.sh
 fi
 
-makecatalogs "$RepoPath" | grep 'warning'
+# Run makecatalogs only if new package(s) were created
+if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) ]]; then
+    makecatalogs "$RepoPath" | grep 'warning'
+fi
 
 exit 0

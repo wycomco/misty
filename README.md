@@ -5,35 +5,35 @@ This script checks for availability of new releases of macOS, starting from macO
 ## Goals of this script
 
 If a new update for any major version is found, it will import into munki repo, creating the following installers:
-- Apple Silicon: `stage_os_installer` and preloader for the installer
-- Intel: `startosinstall` with precache key set to true
+- Apple Silicon: *stage_os_installer* and preloader for the installer
+- Intel: *startosinstall* with precache key set to true
 - Both architectures: Place installer in /Applications directory
 
-The item’s `name` keys will not include a major version. Scoping is done using `board_id` and `device_id` in the plists as `installable_condition`. By using this logic, only the latest available macOS upgrade will be offered to the individual client.
+The item’s *name* keys will not include a major version. Scoping is done using *board_id* and *device_id* in the plists as *installable_condition*. By using this logic, only the latest available macOS upgrade will be offered to the individual client.
 
-`misty` is not intended for updating clients (minor updates within a major macOS version). There are other solutions available for that task.
+*misty* is not intended for updating clients (minor updates within a major macOS version). There are other solutions available for that task.
 
 ## Running the script
 
-- The script requires root privileges.
-- The script does not have any options. You need to specify them in the override files.
-- Currently, after installation a restart is required. After that, you can call it using `misty` or via full path `usr/local/wycomco/misty`.
+The script does not have any command line options. You specify them in the override files.
 
 ### First run: customization
 
-The script will create a `usr/` subfolder in `/Users/Shared/Mist/`, which is already present by installing mist-cli. An override file will be created that you should customize to suite your needs. The script will also ask if you require localizations. If you do, localization templates for the relevant plist files will be copied to the `usr/` subfolder that you should also adjust to your language(s).
+Please run the script using `sudo misty`. The script will then create a `usr/` subfolder in `/Users/Shared/Mist/`, that is already present after installing mist-cli. An override file will be created that you should customize to suite your needs. The script will also ask if you require localizations. If you do, localization templates for the relevant plist files will be copied to the `usr/` subfolder that you should also adjust to your language(s).
 
-You can also place a script called `postinstall.sh` into your usr folder that will get executed after each run. Make sure to make it executable.
+You can also place a script called `postinstall.sh` into your usr folder that will be executed after each run. Make sure to make it executable.
+
+> **Caution**: During the first run, the LaunchDaemon (see below) will be enabled if not running yet. Please make sure you customize your settings before 10:00 pm local time after the first run.
 
 ### Subsequent runs
 
-After you have edited the files in the `usr/` subdirectory, you can start another run of `misty`. It will then download the current full installers and create the respective plist files.
+During installation, a LaunchDaemon will be created that runs the script at 22:00 every night. Please change the file `/Library/LaunchDaemons/de.wycomco.misty.plist` if required. Beware that the LaunchDaemon will be reset after each update. Except for the first run you do not have to run the script manually, but of course you can.
 
-The next run of `misty` compares the full versions of each major version in the `Logs/` subdirectory. If no new updates are available, the script will terminate without downloading or packaging any item. You may want to create a LaunchAgent that will run `misty` every day. It will automatically create new munki items each time a new full installer is available.
+Each run of *misty* compares the full versions of each major version in the `Logs/` subdirectory. If no new updates are available, the script will terminate without downloading or packaging any item.
 
 ## Folder structure
 
-As mentioned above, `mist-cli` is required for running this script, since the search for and download of full installers is done using this tool. `mist-cli` creates a folder `Mist` inside `/Users/Shared`. We are using this folder. Inside that folder, we have several subfolders:
+As mentioned above, *mist-cli* is required for running this script, since the search for and download of full installers is done using this tool. *mist-cli* creates a folder `Mist` inside `/Users/Shared`. We are using this folder. Inside that folder, we have several subfolders:
 
 * `skel/`: These are the template files. Do not edit files in here. `misty` may not work properly if the wrong files are edited, and updates may overwrite some files, too.
 *  `usr/`: This is your place to edit files to suit your needs.
@@ -41,19 +41,20 @@ As mentioned above, `mist-cli` is required for running this script, since the se
 
 During the packaging process, the installer for the respective major version will be present inside the `/Users/Shared/Mist` folder. It will be deleted after all plists have been created.
 
-The script `misty` itself is located in `/usr/local/wycomo`.
+The script *misty* itself is located in `/usr/local/wycomo`.
 
 ## System Requirements
 
 This script was tested with macOS 14 Sonoma. It should work with prior macOS versions, but this is has not been tested.
 
-You should at least have 60 GB of free disk space available during each run.
+You should at least have 60 GB of free disk space available during first run.
 
 ## To do
 
 This is a pre-release. It is working, but we have some tasks on our to do list:
 
-- mist-cli changes the release date, although version and build number remain the same. We need to extract only the build number for comparison. As long as this is not done, `rm_previous_files` will only list the files, but not delete them. Also, all files are being listed, not only the previous versions.
-- Check for space left. We need to check the space on the munki repo, but more importantly, the space on the system disk. After each run involving an installation, files are written to `/private/tmp/msu-target*/` that cannot be deleted by root. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads. More testing needs to be done.
-- LaunchAgent or LaunchDaemon. If the munki repo is not a local storage, we need a LaunchAgent to ensure that the user running this script can access the repo. On the other hand, a LaunchDaemon will run also if no user is logged in.
-- Add `/usr/local/wycomco` to logged in user's PATH
+- Testing in different environments.
+- Check for space available. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values, but more testing needs to be done if the values are appropriate.
+- Proper redirection of echo messages, depending on interactive run or launchd job.
+- Harmonization of variable names.
+- Readability of code in general.
