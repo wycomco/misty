@@ -21,124 +21,42 @@
 
 
 ##################################
-# Global definitions, first run  #
-##################################
-
-export PATH="/usr/bin:/usr/local/bin:/usr/local/munki:$PATH"
-
-repo_required=14 # Size required on repo for single installer in GB
-diskspace_required=30 # Size required on boot disk for single installer in GB
-Base_Path="/Users/Shared/Mist"
-LogPath="$Base_Path/Logs"
-Template="$Base_Path/skel"
-
-if [[ ! -d "$Base_Path/usr" ]]; then
-    mkdir -p "$Base_Path/usr"
-    chmod 777 "$Base_Path/usr"
-fi
-if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
-    currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
-    cp "$Template/override.txt" $Base_Path/usr
-    while true; do
-        echo
-        echo "Do you want to use localized strings in the resulting plists? (y/n)"
-        read yn
-        case $yn in
-            [Yy]* )
-            cp "$Template"/localized_arm.txt "$Template"/localized_deploy.txt "$Template"/localized_stage_os.txt "$Template"/localized_startos.txt "$Base_Path"/usr
-            sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/override.txt
-            echo "Please adjust the file override.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
-            echo "A finder window will open in 5 seconds."
-            sleep 5
-            su -l "$currentUser" -c "open $Base_Path/usr"
-            exit 0 ;;
-            [Nn]* )
-            echo "Please adjust the file $Base_Path/usr/override.txt to your needs now."
-            echo "A finder window will open in 5 seconds."
-            sleep 5
-            su -l "$currentUser" -c "open $Base_Path/usr"
-            exit 0;;
-            * ) echo "Please answer using [y] or [n].";;
-        esac
-    done
-    if ! launchctl list | grep -q "de.wycomco.misty"; then
-        launchctl load /Library/LaunchDaemons/de.wycomco.misty.plist
-    fi
-fi
-
-# Load definitions from config file in /Users/Shared/Mist/usr
-source "$Base_Path"/usr/override.txt
-echo "RepoPath: $RepoPath" > /dev/null
-echo "munki_path: $munki_path" > /dev/null
-echo "munki_name: $munki_name" > /dev/null
-echo "deploy_name: $deploy_name" > /dev/null
-echo "munki_catalog_12: $munki_catalog_12" > /dev/null
-echo "munki_catalog_13: $munki_catalog_13" > /dev/null
-echo "munki_catalog_14: $munki_catalog_14" > /dev/null
-echo "munki_category: $munki_category" > /dev/null
-echo "localization: $localization" > /dev/null
-
-Repo_uid_gid=$(stat -f "%Su:%Sg" "$RepoPath")
-RepoOwner=$(stat -f "%Su" "$RepoPath")
-pkgsdir="$RepoPath/pkgs/$munki_path"
-pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
-
-##################################
-# Check environment              #
-##################################
-
-mist_check=$(which mist)
-if [ $? -ne 0 ]; then
-    echo "Error: mist not found. Please install mist-cli or put it into the PATH." >&2
-    exit 1
-fi
-munkiimport_check=$(which munkiimport)
-if [ $? -ne 0 ]; then
-    echo "Error: munkiimport not found. Please check your munki installation." >&2
-    exit 1
-fi
-if [[ ! -d "$LogPath" ]]; then
-    mkdir -p "$LogPath"
-fi
-if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
-    echo "Error: The directory '$Template' either does not exist or is empty." >&2
-    exit 1
-fi
-if [[ ! -d "$RepoPath" ]]; then
-    echo "Error: Repository not accessible, please check." >&2
-    exit 1
-fi
-if [[ $EUID -ne 0 ]]; then
-   echo "Please run the script as root." 
-   exit 1
-fi
-if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
-    mkdir -p "$pkgsinfodir"/arm64
-    chmod 755 "$pkgsinfodir"/arm64
-    chown "$Repo_uid_gid" "$pkgsinfodir"/arm64
-fi
-if [[ ! -d "$pkgsinfodir"/x86_64 ]]; then
-    mkdir -p "$pkgsinfodir"/x86_64
-    chmod 755 "$pkgsinfodir"/x86_64
-    chown "$Repo_uid_gid" "$pkgsinfodir"/x86_64
-fi
-
-##################################
 # Functions                      #
 ##################################
+
+extract_time_input() {
+    DaemonHour=$(echo $time_input | cut -d: -f1)
+    DaemonMinute=$(echo $time_input | cut -d: -f2)
+    DaemonHour=${DaemonHour#0}
+    DaemonMinute=${DaemonMinute#0}
+}
+
+check_daemon() {
+    DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath)
+    DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath)
+    # Remove leading zeros if present
+    DaemonHourPlist=${DaemonHourPlist#0}
+    DaemonMinutePlist=${DaemonMinutePlist#0}
+    if [[ $DaemonHourPlist -ne $DaemonHour ]]; then
+        PlistBuddy -c "Set :StartCalendarInterval:Hour $DaemonHour" $DaemonPath
+    fi
+    if [[ $DaemonMinutePlist -ne $DaemonMinute ]]; then
+        PlistBuddy -c "Set :StartCalendarInterval:Minute $DaemonMinute" $DaemonPath
+    fi
+}
 
 check_space() {
     local repo_space bootdisk_space repo_disk bootdisk_disk total_required_space
     repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
     if (( repo_space < repo_required )); then
-        echo "Less than $repo_required GB space on repo left. Please provide more space." >&2
+        echo "Less than $repo_required GB space on repo left. Please provide more space." | tee /dev/stderr
         exit 1
     fi
 
     bootdisk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
     bootdisk_space=$(df -k "$bootdisk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
     if (( bootdisk_space < diskspace_required )); then
-        echo "Less than $diskspace_required GB space on boot volume left. Please provide more space." >&2
+        echo "Less than $diskspace_required GB space on boot volume left. Please provide more space." | tee /dev/stderr
         exit 1
     fi
 
@@ -147,24 +65,29 @@ check_space() {
     if [[ "$repo_disk" == "$bootdisk_disk" ]]; then
         total_required_space=$((repo_required + diskspace_required))
         if (( repo_space + bootdisk_space < total_required_space )); then
-            echo "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space." >&2
+            echo "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space." | tee /dev/stderr
             exit 1
         fi
     fi
 }
 
 rm_previous_files() {
+    if ! ls -1 "$pkgsdir"/"$munki_name"-"$os_major"* >/dev/null 2>&1; then
+        echo "No files matching $munki_name version $os_major found. Not removing any files."
+        return
+    fi
+
     local fqos_retired=()
     
-    for file in "$pkgsdir"/app_macos-*; do
+    for file in "$pkgsdir"/"$munki_name"-*; do
         # Extract the version number from the filename
-        version=$(basename "$file" | sed 's/app_macos-\(.*\)\.dmg/\1/')
+        version=$(basename "$file" | sed "s/${munki_name}-\(.*\)\.dmg/\1/")
         # Remove part before the version number
         major=$(echo "$version" | cut -d. -f1)
         # Check if major version matches os_major
         if [[ $major == $os_major ]]; then
             # Remove .dmg from the filename
-            filename=$(basename "$file" | sed 's/app_macos-//' | sed 's/\.dmg$//')
+            filename=$(basename "$file" | sed "s/${munki_name}-//" | sed 's/\.dmg$//')
             # Add the filename to fqos_retired array
             fqos_retired+=("$filename")
         fi
@@ -330,6 +253,132 @@ munkiimport_startos() {
 }
 
 ##################################
+# Global definitions, checks     #
+##################################
+
+export PATH="/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
+
+repo_required=14 # Size required on repo for single installer in GB
+diskspace_required=30 # Size required on boot disk for single installer in GB
+Base_Path="/Users/Shared/Mist"
+LogPath="$Base_Path/Logs"
+Template="$Base_Path/skel"
+DaemonPath="/Library/LaunchDaemons/de.wycomco.misty.plist"
+
+if [[ $EUID -ne 0 ]]; then
+   echo "Please run the script as root." 
+   exit 1
+fi
+mist_check=$(which mist)
+if [ $? -ne 0 ]; then
+    echo "Error: mist not found. Please install mist-cli or put it into the PATH." | tee /dev/stderr
+    exit 1
+fi
+munkiimport_check=$(which munkiimport)
+if [ $? -ne 0 ]; then
+    echo "Error: munkiimport not found. Please check your munki installation." | tee /dev/stderr
+    exit 1
+fi
+if [[ ! -d "$LogPath" ]]; then
+    mkdir -p "$LogPath"
+fi
+if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
+    echo "Error: The directory '$Template' either does not exist or is empty. Please reinstall misty." | tee /dev/stderr
+    exit 1
+fi
+
+##################################
+# First run                      #
+##################################
+
+if [[ ! -d "$Base_Path/usr" ]]; then
+    mkdir -p "$Base_Path/usr"
+    chmod 777 "$Base_Path/usr"
+fi
+if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
+    currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
+    cp "$Template/override.txt" $Base_Path/usr
+    while true; do
+        echo
+        echo "Please enter the time when the script should start in 24 hour format (HH:MM): "
+        read time_input
+        extract_time_input
+        PlistBuddy -c "Set :StartCalendarInterval:Hour $DaemonHour" $DaemonPath
+        PlistBuddy -c "Set :StartCalendarInterval:Minute $DaemonMinute" $DaemonPath
+        echo "# Start of script in the LaunchDaemon" >> "$Base_Path/usr/override.txt"
+        echo "time_input=\"$time_input\"" >> "$Base_Path/usr/override.txt"
+        if ! launchctl list | grep -q "de.wycomco.misty"; then
+            launchctl load $DaemonPath
+        fi
+        echo "Do you want to use localized strings in the resulting plists? (y/n)"
+        read yn
+        case $yn in
+            [Yy]* )
+            cp "$Template"/localized_arm.txt "$Template"/localized_deploy.txt "$Template"/localized_stage_os.txt "$Template"/localized_startos.txt "$Base_Path"/usr
+            sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/override.txt
+            echo "Please adjust the file override.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
+            chmod 666 "$Base_Path"/usr/*.txt
+            echo "A finder window will open in 5 seconds."
+            sleep 5
+            su -l "$currentUser" -c "open $Base_Path/usr"
+            exit 0 ;;
+            [Nn]* )
+            echo "Please adjust the file $Base_Path/usr/override.txt to your needs now."
+            chmod 666 "$Base_Path"/usr/*.txt
+            echo "A finder window will open in 5 seconds."
+            sleep 5
+            su -l "$currentUser" -c "open $Base_Path/usr"
+            exit 0;;
+            * ) echo "Please answer using [y] or [n].";;
+        esac
+    done
+fi
+
+##################################
+# More definitions               #
+##################################
+
+# Load definitions from config file in /Users/Shared/Mist/usr
+source "$Base_Path"/usr/override.txt
+echo "RepoPath: $RepoPath" > /dev/null
+echo "munki_path: $munki_path" > /dev/null
+echo "munki_name: $munki_name" > /dev/null
+echo "deploy_name: $deploy_name" > /dev/null
+echo "munki_catalog_12: $munki_catalog_12" > /dev/null
+echo "munki_catalog_13: $munki_catalog_13" > /dev/null
+echo "munki_catalog_14: $munki_catalog_14" > /dev/null
+echo "munki_category: $munki_category" > /dev/null
+echo "time_input: $time_input" > /dev/null
+echo "localization: $localization" > /dev/null
+
+extract_time_input
+
+Repo_uid_gid=$(stat -f "%Su:%Sg" "$RepoPath")
+RepoOwner=$(stat -f "%Su" "$RepoPath")
+pkgsdir="$RepoPath/pkgs/$munki_path"
+pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
+
+##################################
+# Check environment              #
+##################################
+
+if [[ ! -d "$RepoPath" ]]; then
+    echo "Error: Repository not accessible, please check." | tee /dev/stderr
+    exit 1
+fi
+if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
+    sudo -u "$RepoOwner" mkdir -p "$pkgsinfodir"/arm64
+    chmod 755 "$pkgsinfodir"/arm64
+    chown "$Repo_uid_gid" "$pkgsinfodir"/arm64
+fi
+if [[ ! -d "$pkgsinfodir"/x86_64 ]]; then
+    sudo -u "$RepoOwner" mkdir -p "$pkgsinfodir"/x86_64
+    chmod 755 "$pkgsinfodir"/x86_64
+    chown "$Repo_uid_gid" "$pkgsinfodir"/x86_64
+fi
+check_daemon
+
+##################################
 # Update checks                  #
 ##################################
 
@@ -349,18 +398,24 @@ if [ -f "$LogPath"/previous_state_14.txt ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/current_state_14.txt | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/previous_state_14.txt); then
         macos_14=$(extract_macos_version Sonoma "$LogPath"/current_state_14.txt)
     fi
+else
+    macos_14=$(extract_macos_version Sonoma "$LogPath"/current_state_14.txt)
 fi
 
 if [ -f "$LogPath"/previous_state_13.txt ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/current_state_13.txt | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/previous_state_13.txt); then
         macos_13=$(extract_macos_version Ventura "$LogPath"/current_state_13.txt)
     fi
+else
+    macos_13=$(extract_macos_version Ventura "$LogPath"/current_state_13.txt)
 fi
 
 if [ -f "$LogPath"/previous_state_12.txt ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/current_state_12.txt | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath"/previous_state_12.txt); then
         macos_12=$(extract_macos_version Monterey "$LogPath"/current_state_12.txt)
     fi
+else
+    macos_12=$(extract_macos_version Monterey "$LogPath"/current_state_12.txt)
 fi
 
 ##################################
