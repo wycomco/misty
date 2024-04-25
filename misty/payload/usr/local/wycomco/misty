@@ -1,35 +1,35 @@
-#!/bin/zsh -e
+#!/bin/zsh
 
-#   This script checks for availability of new releases of macOS, starting
-#   from macOS Monterey, using mist-cli (https://github.com/ninxsoft/mist-cli)
-#   and imports into munki.
-#
-#   Copyright 2024 by wycomco.
-#
-#   This program is free software: you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation, either version 3 of the License, or
-#   (at your option) any later version.
-#
-#   This program is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#
-#   You should have received a copy of the GNU General Public License
-#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+################################################################################
+#                                                                              #
+#   MIT License                                                                #
+#                                                                              #
+#   Copyright (c) 2024 Andreas Vogel                                           #
+#                                                                              #
+#   Permission is hereby granted, free of charge, to any person obtaining a    #
+#   copy of this software and associated documentation files (the "Software"), #
+#   to deal in the Software without restriction, including without limitation  #
+#   the rights to use, copy, modify, merge, publish, distribute, sublicense,   #
+#   and/or sell copies of the Software, and to permit persons to whom the      #
+#   Software is furnished to do so, subject to the following conditions:       #
+#                                                                              #
+#   The above copyright notice and this permission notice shall be included    #
+#   in all copies or substantial portions of the Software.                     #
+#                                                                              #
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS    #
+#   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF                 #
+#   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.     #
+#   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY       #
+#   CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,       #
+#   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE          #
+#   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                     #
+#                                                                              #
+################################################################################
 
 
-##################################
-# Functions                      #
-##################################
-
-extract_time_input() {
-    DaemonHour=$(echo $time_input | cut -d: -f1)
-    DaemonMinute=$(echo $time_input | cut -d: -f2)
-    DaemonHour=${DaemonHour#0}
-    DaemonMinute=${DaemonMinute#0}
-}
+################################################################################
+# Functions                                                                    #
+################################################################################
 
 check_daemon() {
     DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath)
@@ -49,14 +49,14 @@ check_space() {
     local repo_space bootdisk_space repo_disk bootdisk_disk total_required_space
     repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
     if (( repo_space < repo_required )); then
-        echo "Less than $repo_required GB space on repo left. Please provide more space." | tee /dev/stderr
+        echo_err "Less than $repo_required GB space on repo left. Please provide more space."
         exit 1
     fi
 
     bootdisk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
     bootdisk_space=$(df -k "$bootdisk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
     if (( bootdisk_space < diskspace_required )); then
-        echo "Less than $diskspace_required GB space on boot volume left. Please provide more space." | tee /dev/stderr
+        echo_err "Less than $diskspace_required GB space on boot volume left. Please provide more space."
         exit 1
     fi
 
@@ -65,58 +65,44 @@ check_space() {
     if [[ "$repo_disk" == "$bootdisk_disk" ]]; then
         total_required_space=$((repo_required + diskspace_required))
         if (( repo_space + bootdisk_space < total_required_space )); then
-            echo "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space." | tee /dev/stderr
+            echo_err "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
             exit 1
         fi
     fi
 }
 
-rm_previous_files() {
-    if ! ls -1 "$pkgsdir"/"$munki_name"-"$os_major"* >/dev/null 2>&1; then
-        echo "No files matching $munki_name version $os_major found. Not removing any files."
-        return
+cleanup() {
+    rm -rf "$Base_Path"/Install\ macOS\ "$os_nice".app
+    mv "$LogPath"/current_state_"$os_major".txt "$LogPath"/previous_state_"$os_major".txt
+    echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
+}
+
+deploy_macos() {
+    sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
+    -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice provisioning"  \
+    --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
+    --icon="$munki_name"_"$os_munki".png --minimum_munki_version=6.0.1 \
+    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
+    --postinstall_script="$Template"/postinstall_script_installer \
+    --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
+    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
+    if [[ $localization == "yes" ]]; then
+        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist)
+        head -n "$localized" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+        cat "$Base_Path"/usr/localized_deploy.txt >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+        sed "s/%version%/$fqos/g" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist
     fi
-
-    local fqos_retired=()
-    
-    for file in "$pkgsdir"/"$munki_name"-*; do
-        # Extract the version number from the filename
-        version=$(basename "$file" | sed "s/${munki_name}-\(.*\)\.dmg/\1/")
-        # Remove part before the version number
-        major=$(echo "$version" | cut -d. -f1)
-        # Check if major version matches os_major
-        if [[ $major == $os_major ]]; then
-            # Remove .dmg from the filename
-            filename=$(basename "$file" | sed "s/${munki_name}-//" | sed 's/\.dmg$//')
-            # Add the filename to fqos_retired array
-            fqos_retired+=("$filename")
-        fi
-    done    
-    # Loop through unique major versions
-    for major_version in $(echo "${fqos_retired[@]}" | cut -d. -f1 | sort -u); do
-        # Filter files based on major version
-        major_files=($(echo "${fqos_retired[@]}" | grep "^${major_version}"))
-        # Sort files based on minor and patch version numbers in descending order
-        major_files_sorted=($(printf '%s\n' "${major_files[@]}" | sort -rV))
-        # Keep only the first element (highest minor and patch version)
-        major_files_sorted=("${(@)major_files_sorted:1}")    
-        # Loop through major_files_sorted array and remove corresponding files
-        for file in "${major_files_sorted[@]}"; do
-            rm -f "${pkgsdir}"/*"${file}".dmg
-            rm -f "${pkgsinfodir}"/*"${file}".plist
-            rm -f "${pkgsinfodir}"/arm64/*"${file}".plist
-            rm -f "${pkgsinfodir}"/x86_64/*"${file}".plist
-            echo "Removed version(s) ${file} from pkgs and pkgsinfo directories"
-        done
-    done
-}
-
-rm_color_codes() {
-    sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' "$1"
-}
-
-extract_macos_version() {
-    sed -n 's/.*macOS '"$1"'[^0-9]*\([0-9.]*\).*/\1/p' "$2" | tr -d '[:space:]'
+    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir"/arm64/"$munki_name"-"$fqos".plist)
+    install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist)
+    head -n "$install_hash" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+    echo '	<key>installable_condition</key>' >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+    cat <<EOF >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+$(echo "$install_condition")
+EOF
+    awk -v install_hash="${install_hash}" 'NR > install_hash' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
+    sed "s/%os_nice%/$os_nice/g" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist
+    rm "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
 }
 
 download_macos() {
@@ -127,6 +113,43 @@ download_macos() {
         # If invoked by launchd, only print error messages to StandardErrorPath
         mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force > /dev/null 2>> /var/log/misty_error.log
     fi
+}
+
+echo_err() {
+    local date_time
+    date_time=$(date +'%Y-%m-%d %H:%M')
+    local message="$@"
+    # Check if running as LaunchDaemon
+    if [[ ! -t 1 ]]; then
+        # Print to stderr with timestamp
+        echo "${date_time}  ${message}" >&2
+    else
+        echo "${message}"
+    fi
+}
+
+echo_std() {
+    local date_time
+    date_time=$(date +'%Y-%m-%d %H:%M')
+    local message="$@"
+    # Check if running as LaunchDaemon
+    if [[ ! -t 1 ]]; then
+        # Print to stdout with timestamp
+        echo "${date_time}  ${message}"
+    else
+        echo "${message}"
+    fi
+}
+
+extract_macos_version() {
+    sed -n 's/.*macOS '"$1"'[^0-9]*\([0-9.]*\).*/\1/p' "$2" | tr -d '[:space:]'
+}
+
+extract_time_input() {
+    DaemonHour=$(echo $time_input | cut -d: -f1)
+    DaemonMinute=$(echo $time_input | cut -d: -f2)
+    DaemonHour=${DaemonHour#0}
+    DaemonMinute=${DaemonMinute#0}
 }
 
 munkiimport_stage_os() {
@@ -162,65 +185,6 @@ munkiimport_stage_os() {
     chown -R "$Repo_uid_gid" "$pkgsinfodir"/arm64
 }
 
-preloader_arm() {
-    sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
-    -c "$munki_catalog" --category="$munki_category" --developer=Apple \
-    --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
-    --icon="$munki_name"_"$os_munki".png --minimum_munki_version=6.0.1 \
-    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
-    --postinstall_script="$Template"/postinstall_script_installer \
-    --arch=arm64 \
-    --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
-    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
-    mv "$pkgsinfodir"/"$munki_name"_arm-"$fqos"-arm64.plist "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist
-    # Retrieve installable_condition from munkiimport_macos and fill in
-    if [[ $localization == "yes" ]]; then
-        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist)
-        head -n "$localized" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-        cat "$Base_Path"/usr/localized_arm.txt >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-        sed "s/%version%/$fqos/g" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist
-    fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir"/arm64/"$munki_name"-"$fqos".plist)
-    install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist)
-    head -n "$install_hash" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-    echo '	<key>installable_condition</key>' >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-    cat <<EOF >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-$(echo "$install_condition")
-EOF
-    awk -v install_hash="${install_hash}" 'NR > install_hash' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-    sed "s/%os_nice%/$os_nice/g" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist
-    rm "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
-}
-
-deploy_macos() {
-    sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
-    -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice provisioning"  \
-    --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
-    --icon="$munki_name"_"$os_munki".png --minimum_munki_version=6.0.1 \
-    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
-    --postinstall_script="$Template"/postinstall_script_installer \
-    --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
-    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
-    if [[ $localization == "yes" ]]; then
-        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist)
-        head -n "$localized" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-        cat "$Base_Path"/usr/localized_deploy.txt >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-        sed "s/%version%/$fqos/g" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist
-    fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir"/arm64/"$munki_name"-"$fqos".plist)
-    install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist)
-    head -n "$install_hash" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-    echo '	<key>installable_condition</key>' >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-    cat <<EOF >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-$(echo "$install_condition")
-EOF
-    awk -v install_hash="${install_hash}" 'NR > install_hash' "$pkgsinfodir"/"$deploy_name"-"$fqos".plist >> "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-    sed "s/%os_nice%/$os_nice/g" "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp > "$pkgsinfodir"/"$deploy_name"-"$fqos".plist
-    rm "$pkgsinfodir"/"$deploy_name"-"$fqos".plist.tmp
-}
-
 munkiimport_startos() {
     munkiimport -n --installer-type startosinstall --name="$munki_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
@@ -252,9 +216,85 @@ munkiimport_startos() {
     chown -R "$Repo_uid_gid" "$pkgsinfodir"/x86_64
 }
 
-##################################
-# Global definitions, checks     #
-##################################
+preloader_arm() {
+    sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
+    -c "$munki_catalog" --category="$munki_category" --developer=Apple \
+    --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
+    --icon="$munki_name"_"$os_munki".png --minimum_munki_version=6.0.1 \
+    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
+    --postinstall_script="$Template"/postinstall_script_installer \
+    --arch=arm64 \
+    --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
+    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
+    mv "$pkgsinfodir"/"$munki_name"_arm-"$fqos"-arm64.plist "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist
+    # Retrieve installable_condition from munkiimport_macos and fill in
+    if [[ $localization == "yes" ]]; then
+        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist)
+        head -n "$localized" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+        cat "$Base_Path"/usr/localized_arm.txt >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+        sed "s/%version%/$fqos/g" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist
+    fi
+    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir"/arm64/"$munki_name"-"$fqos".plist)
+    install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist)
+    head -n "$install_hash" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+    echo '	<key>installable_condition</key>' >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+    cat <<EOF >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+$(echo "$install_condition")
+EOF
+    awk -v install_hash="${install_hash}" 'NR > install_hash' "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist >> "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+    sed "s/%os_nice%/$os_nice/g" "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp > "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist
+    rm "$pkgsinfodir"/arm64/"$munki_name"_arm-"$fqos".plist.tmp
+}
+
+rm_color_codes() {
+    sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' "$1"
+}
+
+rm_previous_files() {
+    setopt nullglob
+    if ! ls -1 "$pkgsdir"/"$munki_name"-"$os_major"* >/dev/null 2>&1; then
+        echo_std "No files matching $munki_name version $os_major found. Not removing any files."
+        return
+    fi
+
+    local fqos_retired=()
+    
+    for file in "$pkgsdir"/"$munki_name"-*; do
+        # Extract the version number from the filename
+        version=$(basename "$file" | sed "s/${munki_name}-\(.*\)\.dmg/\1/")
+        # Remove part before the version number
+        major=$(echo "$version" | cut -d. -f1)
+        # Check if major version matches os_major
+        if [[ $major == $os_major ]]; then
+            # Remove .dmg from the filename
+            filename=$(basename "$file" | sed "s/${munki_name}-//" | sed 's/\.dmg$//')
+            # Add the filename to fqos_retired array
+            fqos_retired+=("$filename")
+        fi
+    done    
+    # Loop through unique major versions
+    for major_version in $(echo "${fqos_retired[@]}" | cut -d. -f1 | sort -u); do
+        # Filter files based on major version
+        major_files=($(echo "${fqos_retired[@]}" | grep "^${major_version}"))
+        # Sort files based on minor and patch version numbers in descending order
+        major_files_sorted=($(printf '%s\n' "${major_files[@]}" | sort -rV))
+        # Keep only the first element (highest minor and patch version)
+        major_files_sorted=("${(@)major_files_sorted:1}")    
+        # Loop through major_files_sorted array and remove corresponding files
+        for file in "${major_files_sorted[@]}"; do
+            rm -f "${pkgsdir}"/*"${file}".dmg
+            rm -f "${pkgsinfodir}"/*"${file}".plist
+            rm -f "${pkgsinfodir}"/arm64/*"${file}".plist
+            rm -f "${pkgsinfodir}"/x86_64/*"${file}".plist
+            echo_std "Removed version(s) ${file} from pkgs and pkgsinfo directories"
+        done
+    done
+}
+
+################################################################################
+# Global definitions, checks                                                   #
+################################################################################
 
 export PATH="/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
 
@@ -266,38 +306,38 @@ Template="$Base_Path/skel"
 DaemonPath="/Library/LaunchDaemons/de.wycomco.misty.plist"
 
 if [[ $EUID -ne 0 ]]; then
-   echo "Please run the script as root." 
+   echo_err "Please run the script as root." 
    exit 1
 fi
 mist_check=$(which mist)
 if [ $? -ne 0 ]; then
-    echo "Error: mist not found. Please install mist-cli or put it into the PATH." | tee /dev/stderr
+    echo_err "Error: mist not found. Please install mist-cli or put it into the PATH."
     exit 1
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
-    echo "Error: munkiimport not found. Please check your munki installation." | tee /dev/stderr
+    echo_err "Error: munkiimport not found. Please check your munki installation."
     exit 1
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
-    echo "Error: The directory '$Template' either does not exist or is empty. Please reinstall misty." | tee /dev/stderr
+    echo_err "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
     exit 1
 fi
 
-##################################
-# First run                      #
-##################################
+################################################################################
+# First run                                                                    #
+################################################################################
 
 if [[ ! -d "$Base_Path/usr" ]]; then
     mkdir -p "$Base_Path/usr"
     chmod 777 "$Base_Path/usr"
 fi
-if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
+if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
     currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
-    cp "$Template/override.txt" $Base_Path/usr
+    cp "$Template/config.txt" $Base_Path/usr
     while true; do
         echo
         echo "Please enter the time when the script should start in 24 hour format (HH:MM): "
@@ -305,25 +345,26 @@ if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
         extract_time_input
         PlistBuddy -c "Set :StartCalendarInterval:Hour $DaemonHour" $DaemonPath
         PlistBuddy -c "Set :StartCalendarInterval:Minute $DaemonMinute" $DaemonPath
-        echo "# Start of script in the LaunchDaemon" >> "$Base_Path/usr/override.txt"
-        echo "time_input=\"$time_input\"" >> "$Base_Path/usr/override.txt"
+        echo "# Start of script in the LaunchDaemon" >> "$Base_Path/usr/config.txt"
+        echo "time_input=\"$time_input\"" >> "$Base_Path/usr/config.txt"
         if ! launchctl list | grep -q "de.wycomco.misty"; then
-            launchctl load $DaemonPath
+            # Re-enable when LaunchDaemon can access smb shares
+            #launchctl load $DaemonPath
         fi
         echo "Do you want to use localized strings in the resulting plists? (y/n)"
         read yn
         case $yn in
             [Yy]* )
             cp "$Template"/localized_arm.txt "$Template"/localized_deploy.txt "$Template"/localized_stage_os.txt "$Template"/localized_startos.txt "$Base_Path"/usr
-            sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/override.txt
-            echo "Please adjust the file override.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
+            sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/config.txt
+            echo "Please adjust the file config.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
             chmod 666 "$Base_Path"/usr/*.txt
             echo "A finder window will open in 5 seconds."
             sleep 5
             su -l "$currentUser" -c "open $Base_Path/usr"
             exit 0 ;;
             [Nn]* )
-            echo "Please adjust the file $Base_Path/usr/override.txt to your needs now."
+            echo "Please adjust the file $Base_Path/usr/config.txt to your needs now."
             chmod 666 "$Base_Path"/usr/*.txt
             echo "A finder window will open in 5 seconds."
             sleep 5
@@ -334,12 +375,12 @@ if [[ ! -f "$Base_Path/usr/override.txt" ]]; then
     done
 fi
 
-##################################
-# More definitions               #
-##################################
+################################################################################
+# Import config, more definitions                                              #
+################################################################################
 
 # Load definitions from config file in /Users/Shared/Mist/usr
-source "$Base_Path"/usr/override.txt
+source "$Base_Path"/usr/config.txt
 echo "RepoPath: $RepoPath" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
 echo "munki_name: $munki_name" > /dev/null
@@ -358,12 +399,12 @@ RepoOwner=$(stat -f "%Su" "$RepoPath")
 pkgsdir="$RepoPath/pkgs/$munki_path"
 pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
 
-##################################
-# Check environment              #
-##################################
+################################################################################
+# Check environment                                                            #
+################################################################################
 
 if [[ ! -d "$RepoPath" ]]; then
-    echo "Error: Repository not accessible, please check." | tee /dev/stderr
+    echo_err "Error: Repository \"$RepoPath\" not accessible, please check."
     exit 1
 fi
 if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
@@ -378,9 +419,9 @@ if [[ ! -d "$pkgsinfodir"/x86_64 ]]; then
 fi
 check_daemon
 
-##################################
-# Update checks                  #
-##################################
+################################################################################
+# Update checks                                                                #
+################################################################################
 
 # We want to check each major version seperately
 mist list installer 14 --latest | grep GB > "$LogPath"/tmp_state_14.txt
@@ -418,9 +459,9 @@ else
     macos_12=$(extract_macos_version Monterey "$LogPath"/current_state_12.txt)
 fi
 
-##################################
-# Update routines                #
-##################################
+################################################################################
+# Update routines                                                              #
+################################################################################
 
 # Execute loops only if version has changed
 if [ -n "$macos_14" ]; then
@@ -433,14 +474,13 @@ if [ -n "$macos_14" ]; then
     os_nice="Sonoma"
     check_space
     rm_previous_files
-    echo "Downloading installer for macOS $macos_14"
+    echo_std "Downloading installer for macOS $fqos"
     download_macos
     munkiimport_stage_os
     preloader_arm
     deploy_macos
     munkiimport_startos
-    rm -rf "$Base_Path"/Install\ macOS\ "$os_nice".app
-    echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
+    cleanup
 fi
 if [ -n "$macos_13" ]; then
     fqos=$macos_13
@@ -452,14 +492,13 @@ if [ -n "$macos_13" ]; then
     os_nice="Ventura"
     check_space
     rm_previous_files
-    echo "Downloading installer for macOS $macos_13"
+    echo_std "Downloading installer for macOS $fqos"
     download_macos
     munkiimport_stage_os
     preloader_arm
     deploy_macos
     munkiimport_startos
-    rm -rf "$Base_Path"/Install\ macOS\ "$os_nice".app
-    echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
+    cleanup
 fi
 if [ -n "$macos_12" ]; then
     fqos=$macos_12
@@ -471,24 +510,18 @@ if [ -n "$macos_12" ]; then
     os_nice="Monterey"
     check_space
     rm_previous_files
-    echo "Downloading installer for macOS $macos_12"
+    echo_std "Downloading installer for macOS $fqos"
     download_macos
     munkiimport_stage_os
     preloader_arm
     deploy_macos
     munkiimport_startos
-    rm -rf "$Base_Path"/Install\ macOS\ "$os_nice".app
-    echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
+    cleanup
 fi
 
-##################################
-# Cleanup at end, postinstall    #
-##################################
-
-# Overwrite previous state with new output
-mv "$LogPath"/current_state_14.txt "$LogPath"/previous_state_14.txt
-mv "$LogPath"/current_state_13.txt "$LogPath"/previous_state_13.txt
-mv "$LogPath"/current_state_12.txt "$LogPath"/previous_state_12.txt
+################################################################################
+# Postinstall, makecatalogs                                                    #
+################################################################################
 
 # Run user-specific postinstall if present and new package(s) were created
 if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) && -f "$Base_Path"/usr/postinstall.sh ]]; then

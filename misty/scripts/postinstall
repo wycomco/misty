@@ -1,32 +1,7 @@
-#!/bin/bash
+#!/bin/zsh
 
-currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
-homeDir=$(dscl . -read /Users/"$currentUser" NFSHomeDirectory | awk '{print $2}')
-mistyDir="/usr/local/wycomco"
-
-if [[ ":$PATH:" != *":$mistyDir:"* ]]; then
-    if [ -f "$homeDir/.bashrc" ]; then
-        if ! grep -q ":$mistyDir" "$homeDir/.bashrc"; then
-            sed -i '' -e '/^export PATH=/ s|$|:'"$mistyDir"'|' "$homeDir/.bashrc"
-            echo "Added '$mistyDir' to your PATH in .bashrc."
-        fi
-    fi
-    if [ -f "$homeDir/.bash_profile" ]; then
-        if ! grep -q ":$mistyDir" "$homeDir/.bash_profile"; then
-            sed -i '' -e '/^export PATH=/ s|$|:'"$mistyDir"'|' "$homeDir/.bash_profile"
-            echo "Added '$mistyDir' to your PATH in .bash_profile."
-        fi
-    fi
-    if [ -f "$homeDir/.zshrc" ]; then
-        if ! grep -q ":$mistyDir" "$homeDir/.zshrc"; then
-            sed -i '' -e '/^export PATH=/ s|$|:'"$mistyDir"'|' "$homeDir/.zshrc"
-            echo "Added '$mistyDir' to your PATH in .zshrc."
-        fi
-    fi
-    if [ ! -f "$homeDir/.bashrc" ] && [ ! -f "$homeDir/.bash_profile" ] && [ ! -f "$homeDir/.zshrc" ]; then
-        osascript -e 'display alert "PATH variable could not be set" message "Unable to find .bashrc, .bash_profile, or .zshrc. Please add '$mistyDir' to your PATH manually to run misty."'
-        exit 1
-    fi
-else
-    echo "'$mistyDir' is already in your PATH."
+if [ ! -L "/usr/local/bin/misty" ]; then
+    ln -s "/usr/local/wycomco/misty" "/usr/local/bin/misty"
 fi
+
+exit 0

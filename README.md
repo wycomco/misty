@@ -1,6 +1,6 @@
 # misty
 
-This script checks for availability of new releases of macOS, starting from macOS Monterey, using [mist-cli](https://github.com/ninxsoft/mist-cli) (not included in the installert of this project). It also requires a [munki](https://github.com/munki/munki/) repo already being set up.
+This script checks for availability of new releases of macOS, starting from macOS Monterey, using *mist-cli* (not included in the installert of this project). It also requires a *munki* repo already being set up. Please see the [System Requirements](#system-requirements) sections below for links.
 
 ## Goals of this script
 
@@ -43,19 +43,30 @@ During the packaging process, the installer for the respective major version wil
 
 The script *misty* itself is located in `/usr/local/wycomo`.
 
+## Icons
+
+The resulting payloads expect png files in the `icon` subfolder of the munki repo following the naming conventions `%munki_name%_version.png` with `%munki_name%` being the name you have specified in the `/Users/Shared/Mist/usr/override.txt` file (standard = *macos*) and `version` being the major macOS version like *monterey*, *ventura* and *sonoma*. Example: `macos_sonoma.png`.
+
 ## System Requirements
 
 This script was tested with macOS 14 Sonoma. It should also work with prior macOS versions, but this is has not been tested.
 
-You should at least have 60 GB of free disk space available during first run.
+You should at least have 60 GB of free disk space available during first run (see To do section below).
+
+You also need the following dependencies:
+
+- [mist-cli](https://github.com/ninxsoft/mist-cli)
+- [munki](https://github.com/munki/munki/)
 
 ## To do
 
 This is a pre-release. It is working, but we have some tasks on our to do list:
 
+- In a vanilla repo, you first need to `munkiimport` any item and do a `makecatalogs` to initialize the `all` catalog.
+- *misty* invoked by the LaunchDaemon cannot access an smb file share with appropriate permissions. Load of LaunchDaemon is disabled at the moment.
 - Testing in different environments.
-- Check for space available. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values, but more testing needs to be done if the values are appropriate.
-- Proper redirection of echo messages, depending on interactive run or launchd job. Time stamps would be enlightening, too.
+- Check for space available. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values that stops the import process, but more testing needs to be done if the values are appropriate.
+- Error messages of OS commands when running as a launchd job do not include time stamps.
 - Function `rm_previous_files` can be minimized a lot.
 - Harmonization of variable names.
 - Readability of code in general.
