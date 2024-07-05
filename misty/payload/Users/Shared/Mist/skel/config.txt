@@ -1,6 +1,6 @@
 # Please specify the absolute path to your munki repo
 RepoPath="/Users/Shared/munki_repo"
-# Please specify the sub directory where the munki objects should be placed, relative below pkgs and pkgsinfo from your munki repo
+# Please specify the subdirectory where the munki objects should be placed, relative below pkgs and pkgsinfo from your munki repo
 munki_path="apple"
 # Please specify the item name as well as the file name
 munki_name="macos"
@@ -14,3 +14,5 @@ munki_catalog_14="testing"
 munki_category="Utilities"
 # If turned to "yes", localizations will be used. If not present yet, copy the files starting with "localized_" from the skel/ dir into the usr/ folder and adjust to your needs
 localization="no"
+# Start of script in the LaunchDaemon
+time_input="22:00"
