@@ -45,15 +45,42 @@ check_daemon() {
     fi
 }
 
+check_repo() {
+    # First 'if' condition only applicable for SMB shares, accepting almost any positive input in config.txt
+    if [[ "$Is_SMB" == "yes" || "$Is_SMB" == "y" || "$Is_SMB" == "Y" || "$Is_SMB" == "Yes" || "$Is_SMB" == "YES" ]]; then
+        local RepoShare=$(echo "$RepoPath" | awk -F'/' '{print $3}')
+        if ! mount | grep -q "/Volumes/${RepoShare}"; then
+            local interval=1
+            local timeout=30
+            local elapsed=0
+            # Create the mount point if it doesn't exist
+            mkdir -p "/Volumes/${RepoShare}"
+            mount_smbfs "//${RepoUser}:${RepoPass}@${RepoName}/${RepoShare}" "/Volumes/${RepoShare}"
+            while ! ls "${RepoPath}" &>/dev/null; do
+                sleep $interval
+                ((elapsed+=interval))
+                if [ $elapsed -ge $timeout ]; then
+                    echo_err "Repositories' share cannot be mounted within 30 seconds. Exiting ..."
+                    exit 1
+                fi
+            done
+            echo_std "Share needed to be mounted."
+        fi
+    # 'Elif' loop applicable for locally attached volumes (USB, Thunderbolt)
+    elif [[ ! -d "$RepoPath" ]]; then
+        echo_err "Error: Repository \"$RepoPath\" not accessible, please check."
+        exit 1
+    fi
+}
+
 check_space() {
-    local boot_disk boot_space repo_disk repo_space total_required_space
-    boot_disk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
-    boot_space=$(df -k "$boot_disk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
-    repo_disk=$(df -P "$RepoPath" | awk 'NR==2{print $1}')
-    repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
+    local boot_disk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
+    local boot_space=$(df -k "$boot_disk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
+    local repo_disk=$(df -P "$RepoPath" | awk 'NR==2{print $1}')
+    local repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
 
     if [[ "$repo_disk" == "$boot_disk" ]]; then
-        total_required_space=$((repo_required + diskspace_required))
+        local total_required_space=$((repo_required + diskspace_required))
         if (( boot_space < total_required_space )); then
             echo_err "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
             exit 1
@@ -117,7 +144,7 @@ download_macos() {
 
 echo_err() {
     local date_time
-    date_time=$(date +'%Y-%m-%d %H:%M')
+    date_time=$(date +'%Y-%m-%d %H:%M:%S')
     local message="$@"
     # Check if running as LaunchDaemon
     if [[ ! -t 1 ]]; then
@@ -130,7 +157,7 @@ echo_err() {
 
 echo_std() {
     local date_time
-    date_time=$(date +'%Y-%m-%d %H:%M')
+    date_time=$(date +'%Y-%m-%d %H:%M:%S')
     local message="$@"
     # Check if running as LaunchDaemon
     if [[ ! -t 1 ]]; then
@@ -410,6 +437,10 @@ fi
 # Load definitions from config file in /Users/Shared/Mist/usr
 source "$Base_Path"/usr/config.txt
 echo "RepoPath: $RepoPath" > /dev/null
+echo "Is_SMB: $Is_SMB" > /dev/null
+echo "RepoUser: $RepoUser" > /dev/null
+echo "RepoPass: $RepoPass" > /dev/null
+echo "RepoName: $RepoName" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
 echo "munki_name: $munki_name" > /dev/null
 echo "deploy_name: $deploy_name" > /dev/null
@@ -431,10 +462,7 @@ pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
 # Check environment                                                            #
 ################################################################################
 
-if [[ ! -d "$RepoPath" ]]; then
-    echo_err "Error: Repository \"$RepoPath\" not accessible, please check."
-    exit 1
-fi
+check_repo
 if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
     sudo -u "$RepoOwner" mkdir -p "$pkgsinfodir/arm64"
     chmod 755 "$pkgsinfodir"/arm64

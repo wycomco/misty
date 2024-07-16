@@ -1,5 +1,10 @@
-# Please specify the absolute path to your munki repo
-RepoPath="/Users/Shared/munki_repo"
+# Please specify the absolute path to your munki repo by changing the value within the quotes
+RepoPath="/Users/Shared/reponame or /Volumes/munki/reponame"
+# Only regard the next four lines if the repo is an SMB share
+Is_SMB="no"
+RepoUser="username"
+RepoPass="password"
+RepoName="DNS name or IP address of the munki server"
 # Please specify the subdirectory where the munki objects should be placed, relative below pkgs and pkgsinfo from your munki repo
 munki_path="apple"
 # Please specify the item name as well as the file name
