@@ -64,7 +64,7 @@ check_repo() {
                     exit 1
                 fi
             done
-            echo_std "Share needed to be mounted."
+            echo_std "Share ${RepoShare} was mounted."
         fi
     # 'Elif' loop applicable for locally attached volumes (USB, Thunderbolt)
     elif [[ ! -d "$RepoPath" ]]; then
@@ -143,8 +143,7 @@ download_macos() {
 }
 
 echo_err() {
-    local date_time
-    date_time=$(date +'%Y-%m-%d %H:%M:%S')
+    local date_time=$(get_timestamp)
     local message="$@"
     # Check if running as LaunchDaemon
     if [[ ! -t 1 ]]; then
@@ -156,8 +155,7 @@ echo_err() {
 }
 
 echo_std() {
-    local date_time
-    date_time=$(date +'%Y-%m-%d %H:%M:%S')
+    local date_time=$(get_timestamp)
     local message="$@"
     # Check if running as LaunchDaemon
     if [[ ! -t 1 ]]; then
@@ -177,6 +175,12 @@ extract_time_input() {
     DaemonMinute=$(echo $time_input | cut -d: -f2)
     DaemonHour=${DaemonHour#0}
     DaemonMinute=${DaemonMinute#0}
+}
+
+get_timestamp() {
+    local current_time=$(date +%s)
+    local milliseconds=$(perl -MTime::HiRes -e 'printf "%.3f\n", Time::HiRes::time' | cut -d. -f2)
+    echo $(date -r "$current_time" +"%Y-%m-%d %H:%M:%S").$milliseconds
 }
 
 munkiimport_stage_os() {
@@ -336,14 +340,14 @@ rm_previous_files() {
             rm -f "${pkgsinfodir}"/*"${file}".plist
             rm -f "${pkgsinfodir}"/arm64/*"${file}".plist
             rm -f "${pkgsinfodir}"/x86_64/*"${file}".plist
-            echo_std "Removed version(s) ${file} from pkgs and pkgsinfo directories"
+            echo_std "Removed macOS version(s) ${file} from pkgs and pkgsinfo directories."
             files_deleted=true
         done
     done
 
     # Check if only one version was found or if no files were deleted
     if [ "$initial_versions" -eq 1 ] || [ "$files_deleted" = false ]; then
-        echo_std "Only one previous version of $munki_name version $os_major found. Not removing any files."
+        echo_std "Only one previous version of macOS ${os_nice} present in repository. Not removing any files."
     fi
 }
 
