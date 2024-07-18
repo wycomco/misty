@@ -105,6 +105,7 @@ cleanup() {
 }
 
 deploy_macos() {
+    echo_std "Creating deployment item for macOS $fqos"
     sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice preparation"  \
     --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
@@ -133,6 +134,7 @@ EOF
 }
 
 download_macos() {
+    echo_std "Downloading installer for macOS $fqos"
     if [[ -t 1 ]]; then
         # Reduce output, but output progress of single steps for interactive run
         mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
@@ -184,6 +186,7 @@ get_timestamp() {
 }
 
 munkiimport_stage_os() {
+    echo_std "Performing munkiimport for ARM version of macOS $fqos"
     munkiimport -n --installer-type stage_os_installer --name="$munki_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice" --description="Downloads macOS $os_nice $fqos" \
@@ -217,6 +220,7 @@ munkiimport_stage_os() {
 }
 
 munkiimport_startos() {
+    echo_std "Performing munkiimport for Intel version of macOS $fqos"
     munkiimport -n --installer-type startosinstall --name="$munki_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice" --description="Installs macOS $os_nice $fqos" \
@@ -253,6 +257,7 @@ munkiimport_startos() {
 }
 
 preloader_arm() {
+    echo_std "Creating preloader for ARM version of macOS $fqos"
     sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
@@ -286,7 +291,6 @@ EOF
 repo_stuff () {
     check_space
     rm_previous_files
-    echo_std "Downloading installer for macOS $fqos"
     download_macos
     munkiimport_stage_os
     preloader_arm
@@ -463,8 +467,13 @@ pkgsdir="$RepoPath/pkgs/$munki_path"
 pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
 
 ################################################################################
-# Check environment                                                            #
+# Initialize launchd stdout messages, check environment                        #
 ################################################################################
+
+# Only execute if run as launchd
+if [[ ! -t 1 ]]; then
+    echo_std "Start of misty run."
+fi
 
 check_repo
 if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
@@ -570,5 +579,9 @@ if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) ]]; then
 fi
 
 echo_std "Finished misty run."
+# Enter an empty line if run as launchd
+if [[ ! -t 1 ]]; then
+    echo ""  | tee >(cat >&2)
+fi
 
 exit 0
