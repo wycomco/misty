@@ -528,6 +528,9 @@ else
     macos_12=$(extract_macos_version Monterey "$LogPath/current_state_12.txt")
 fi
 
+# Clean up tmp files
+rm -rf "$LogPath/tmp_state_*.txt"
+
 ################################################################################
 # Update routines                                                              #
 ################################################################################
