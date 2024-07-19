@@ -69,14 +69,14 @@ You should have at least 60 GB of free disk space available during the first run
 
 ## Prerequisites
 
-If you are running *misty* via its LaunchDaemon (advised workflow) and the munki repository is being accessed via `SMB`, you need to give full disk access (FDA) to `/bin/zsh`. This is due to restrictions in macOS. You can do so by first using the *Finder*’s *Go To …* command and enter `/bin`. Scroll down to `zsh` and leave the window open. Then, go to *System Settings* => *Privacy & Security* => *Full Disk Access* and drag and drop the `zsh` binary into the *System Settings* window.
-
 You need to install the following dependencies:
 
 - [mist-cli](https://github.com/ninxsoft/mist-cli)
 - [munki](https://github.com/munki/munki/)
 
 The munki repo needs to be set up by you. In a vanilla repo, you first need to `munkiimport` any item and do a `makecatalogs` to initialize the `all` catalog.
+
+If you are running *misty* via its LaunchDaemon (advised workflow) and the munki repository is being accessed via `SMB`, you need to give full disk access (FDA) to *Zsh*. This is due to restrictions in macOS. You can do so by first using the *Finder*’s *Go To …* command and enter `/bin`. Scroll down to `zsh` and leave the window open. Then, go to *System Settings* => *Privacy & Security* => *Full Disk Access* and drag and drop the `zsh` binary into the *System Settings* window.
 
 ## Testing Methods
 
