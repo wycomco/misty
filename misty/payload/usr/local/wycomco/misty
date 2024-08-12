@@ -99,6 +99,9 @@ check_space() {
 }
 
 cleanup() {
+    chown "$Repo_uid_gid" "$pkgsdir/$munki_name-$fqos.dmg"
+    chown "$Repo_uid_gid" "$pkgsinfodir/arm64/${munki_name}-$fqos.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" \
+    "$pkgsinfodir/$deploy_name-$fqos.plist" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
     rm -rf "$Base_Path/Install macOS $os_nice.app"
     mv "$LogPath"/current_state_"$os_major".txt "$LogPath"/previous_state_"$os_major".txt
     echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
@@ -106,7 +109,7 @@ cleanup() {
 
 deploy_macos() {
     echo_std "Creating deployment item for macOS $fqos"
-    sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
+    munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice preparation"  \
     --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
     --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
@@ -219,8 +222,6 @@ munkiimport_stage_os() {
     cat "$Template/pre_inserts_arm64" >> "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
     awk -v pre_inserts="${pre_inserts}" 'NR > pre_inserts' "$pkgsinfodir/arm64/$munki_name-$fqos.plist" >> "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
     mv "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp" "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
-    chown "$Repo_uid_gid" "$pkgsdir/$munki_name-$fqos.dmg"
-    chown -R "$Repo_uid_gid" "$pkgsinfodir"/arm64
 }
 
 munkiimport_startos() {
@@ -257,12 +258,11 @@ munkiimport_startos() {
     cat "$Template/pre_inserts_x86_64" >> "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
     awk -v pre_inserts="${pre_inserts}" 'NR > pre_inserts' "$pkgsinfodir/x86_64/$munki_name-$fqos.plist" >> "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
     mv "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    chown -R "$Repo_uid_gid" "$pkgsinfodir/x86_64"
 }
 
 preloader_arm() {
     echo_std "Creating preloader for ARM version of macOS $fqos"
-    sudo -u "$RepoOwner" munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
+    munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
     --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
