@@ -137,10 +137,14 @@ download_macos() {
     echo_std "Downloading installer for macOS $fqos"
     if [[ -t 1 ]]; then
         # Reduce output, but output progress of single steps for interactive run
-        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
+        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | grep 'There is a mist update available|\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
     else
         # If invoked by launchd, only print error messages to StandardErrorPath
-        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force > /dev/null 2>> /var/log/misty_error.log
+        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force 2>> /var/log/misty_error.log | while read -r line; do
+            if echo "$line" | grep -q 'There is a mist update available'; then
+                echo "$line" >> /var/log/misty.log
+            fi
+        done
     fi
 }
 
