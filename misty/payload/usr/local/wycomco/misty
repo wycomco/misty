@@ -118,6 +118,7 @@ deploy_macos() {
      --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
+    mv "$pkgsinfodir/$deploy_name-$fqos" "$pkgsinfodir/$deploy_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
         head -n "$localized" "$pkgsinfodir/$deploy_name-$fqos.plist" > "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
@@ -272,7 +273,7 @@ preloader_arm() {
     --arch=arm64 --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
-    mv "$pkgsinfodir/${munki_name}_arm-$fqos-arm64.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
+    mv "$pkgsinfodir/${munki_name}_arm-$fqos-arm64" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
     # Retrieve installable_condition from munkiimport_macos and fill in
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist")
