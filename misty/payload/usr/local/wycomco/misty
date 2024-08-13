@@ -115,6 +115,7 @@ deploy_macos() {
     --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --postinstall_script="$Template"/postinstall_script_installer \
+     --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
     if [[ $localization == "yes" ]]; then
@@ -268,7 +269,7 @@ preloader_arm() {
     --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --postinstall_script="$Template/postinstall_script_installer" \
-    --arch=arm64 \
+    --arch=arm64 --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg"
     mv "$pkgsinfodir/${munki_name}_arm-$fqos-arm64.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
