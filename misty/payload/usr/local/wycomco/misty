@@ -467,8 +467,6 @@ echo "localization: $localization" > /dev/null
 
 extract_time_input
 
-Repo_uid_gid=$(stat -f "%Su:%Sg" "$RepoPath")
-RepoOwner=$(stat -f "%Su" "$RepoPath")
 pkgsdir="$RepoPath/pkgs/$munki_path"
 pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
 
@@ -482,6 +480,10 @@ if [[ ! -t 1 ]]; then
 fi
 
 check_repo
+
+Repo_uid_gid=$(stat -f "%Su:%Sg" "$RepoPath")
+RepoOwner=$(stat -f "%Su" "$RepoPath")
+
 if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
     sudo -u "$RepoOwner" mkdir -p "$pkgsinfodir/arm64"
     chmod 755 "$pkgsinfodir"/arm64
