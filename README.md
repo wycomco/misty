@@ -94,7 +94,8 @@ This is a pre-release. Being said that, you are highly encouraged to test it in 
 
 This is a pre-release. It is working, but we have some tasks on our to-do list:
 
-- Testing in different environments. preferably with SMB shares.
+- Testing in different environments, preferably with SMB shares.
+- Ensure all items that require FDA are mentioned.
 - Check for available space. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values that stops the import process for each major version, but more testing needs to be done to ensure the values are appropriate.
 - Improve message output.
 - Harmonize variable names.
