@@ -144,7 +144,7 @@ download_macos() {
         # Reduce output, but output progress of single steps for interactive run
         mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | tee >(grep 'There is a mist update available') | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
     else
-        # If invoked by launchd, only print error messages to StandardErrorPath
+        # If invoked by launchd, only print error messages to StandardErrorPath and update informations on mist-cli to StandardOutPath
         mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force 2>> /var/log/misty_error.log | while read -r line; do
             if echo "$line" | grep -q 'There is a mist update available'; then
                 echo "$line" >> /var/log/misty.log
