@@ -76,7 +76,7 @@ You need to install the following dependencies:
 
 The munki repo needs to be set up by you. In a vanilla repo, you first need to `munkiimport` any item and do a `makecatalogs` to initialize the `all` catalog.
 
-If you are running *misty* via its LaunchDaemon (advised workflow) and the munki repository is being accessed via `SMB`, you need to give full disk access (FDA) to *Zsh*. This is due to restrictions in macOS. You can do so by first using the *Finder*’s *Go To …* command and enter `/bin`. Scroll down to `zsh` and leave the window open. Then, go to *System Settings* => *Privacy & Security* => *Full Disk Access* and drag and drop the `zsh` binary into the *System Settings* window. After that, also grant FDA to `/usr/bin/hdiutil` using the same way described for `/bin/zsh`.
+If you are running *misty* via its LaunchDaemon (advised workflow) and the munki repository is being accessed via `SMB`, you need to give full disk access (FDA) to *Zsh*. This is due to restrictions in macOS. You can do so by first using the *Finder*’s *Go To …* command and enter `/bin`. Scroll down to `zsh` and leave the window open. Then, go to *System Settings* => *Privacy & Security* => *Full Disk Access* and drag and drop the `zsh` binary into the *System Settings* window. After that, also grant FDA to `/usr/bin/hdiutil` using the same way described for `/bin/zsh`. There may be more items that need FDA.
 
 ## Testing Methods
 
