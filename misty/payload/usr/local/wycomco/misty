@@ -591,9 +591,9 @@ if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) ]]; then
 fi
 
 echo_std "Finished misty run."
-# Enter an empty line if run as launchd
+# Enter an empty line if run as launchd to StandardOutPath
 if [[ ! -t 1 ]]; then
-    echo ""  | tee >(cat >&2)
+    echo
 fi
 
 exit 0
