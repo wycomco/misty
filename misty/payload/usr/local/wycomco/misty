@@ -118,6 +118,7 @@ deploy_macos() {
      --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
+    sleep 20 # wait for plist to be created
     mv "$pkgsinfodir/$deploy_name-$fqos" "$pkgsinfodir/$deploy_name-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/$deploy_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
@@ -205,6 +206,7 @@ munkiimport_stage_os() {
     --arch=arm64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$Base_Path/Install macOS $os_nice.app" > /dev/null
+    sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
     mv "$pkgsinfodir/$munki_name-$fqos-arm64" "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
@@ -238,6 +240,7 @@ munkiimport_startos() {
     --arch=x86_64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" \
     --pkgvers="$fqos" "$Base_Path/Install macOS $os_nice.app" > /dev/null
+    sleep 20 # wait for plist to be created
     rm "$pkgsdir/Install macOS $os_nice-$fqos.dmg"
     mv "$pkgsinfodir/$munki_name-$fqos-x86_64" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
     # munkiimport creates different dmgs for stage_os and startos. We grab the required data from the stage_os plist to use its dmg
@@ -276,6 +279,7 @@ preloader_arm() {
     --arch=arm64 --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
+    sleep 20 # wait for plist to be created
     mv "$pkgsinfodir/${munki_name}_arm-$fqos-arm64" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
     # Retrieve installable_condition from munkiimport_macos and fill in
