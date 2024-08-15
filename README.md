@@ -1,15 +1,21 @@
 # misty
 
-This script checks for the availability of new macOS releases, starting from macOS Monterey, using *mist-cli* (not included in this project's installer). It also requires a *munki* repo to be already set up. Please see the [System Requirements](#system-requirements) section below for links.
+This script checks for the availability of new macOS releases currently supported by Apple, using *mist-cli* (not included in this project’s installer). It also requires a *munki* repo to be already set up. Please see the [System Requirements](#system-requirements) section below for links.
+
+Since this is a pre-release with frequent updates, the binary has not yet been signed or notarized. To open the downloaded installer, please right-click the `.pkg` file and select 'Open'.
 
 ## Goals of this Script
 
 If a new update for any major version is found, it will be imported into the munki repo, creating the following installers:
 - Apple Silicon: *stage_os_installer* and preloader for the installer
 - Intel: *startosinstall* with precache key set to true
-- Both architectures: Place installer in the `/Applications` directory
+- Both architectures: Place installer in the `/Applications` directory for a later deployment
 
 The item’s *name* keys will not include a major version. Scoping is done using *board_id* and *device_id* in the plists as *installable_condition*. By using this logic, only the latest available macOS upgrade will be offered to the individual client.
+
+If present, one prior version will be kept (last known good). Older versions will be deleted before importing the new major version into the munki repo. We will update the script to support each new macOS once it is available to public. Older versions not being supported by Apple anymore (e.g., macOS 12 Monterey) will then not get deleted automatically. You will have to manually remove older items if not needed anymore in your repo.
+
+Although supported by *mist-cli*, we do not offer beta releases. This workflow aims at production environments serving a larger number of clients with different hardware models needing to upgrade to different major versions.
 
 *misty* is not intended for updating clients (minor updates within a major macOS version). There are other solutions available for that task.
 
@@ -30,7 +36,7 @@ During the first run, a LaunchDaemon (`/Library/LaunchDaemons/de.wycomco.misty.p
 - `RepoPath`: This is the `Repo URL` configured in munki. Run `munkiimport --configure` to see what is set there if unsure.
 - `Is_SMB`: Set to `yes` if your `RepoPath` lives on an `SMB` share.
 - `RepoUser`: Only applicable if `Is_SMB` is set to `yes`. Must contain the munki user login name for the repo share.
-- `RepoPass`: Only applicable if `Is_SMB` is set to `yes`. Must contain the munki user password for the repo share. A better implementation is planned, as `/Users/Shared/` is not the best place for keeping secrets.
+- `RepoPass`: Only applicable if `Is_SMB` is set to `yes`. Must contain the munki user password for the repo share.
 - `RepoName`: Only applicable if `Is_SMB` is set to `yes`. DNS name or IP address of the server holding the repo’s share. Not both.
 - `munki_path`: Folder path below the `pkgsinfo` folder inside the munki repo. Can contain slashes for structured repos.
 - `munki_name`: Item name for the Apple Silicon and Intel munki items. The Apple Silicon preloader is handled as described in the *Additional info* section of the [munki wiki](https://github.com/munki/munki/wiki/Staging-macOS-Installers#additional-info) and is suffixed by `_arm`.
@@ -38,6 +44,7 @@ During the first run, a LaunchDaemon (`/Library/LaunchDaemons/de.wycomco.misty.p
 - `munki_catalog_[major_version]`: In the first 90 days, major updates (upgrades) to a new macOS version can be omitted using MDM. To allow scoping of different staging groups, each major version can be set to a different munki catalog.
 - `munki_category`: Sets the category for all resulting munki items.
 - `localization`: Set to `yes` if you support different languages other than English in your munki repository.
+- `time_input`: Enter the desired start time for automated runs.
 
 ### Subsequent Runs
 
@@ -47,9 +54,9 @@ Each run of *misty* compares the full versions of each major version in the `Log
 
 ## Folder Structure
 
-As mentioned above, *mist-cli* is required for running this script since the search for and download of full installers are done using this tool. *mist-cli* creates a folder `Mist` inside `/Users/Shared`. We are using this folder. Inside that folder, we have several subfolders:
+As mentioned above, *mist-cli* is required for running this script. Its installer creates a folder `Mist` inside `/Users/Shared`. We are using this folder. Inside that folder, we have several subfolders:
 
-- `skel/`: These are the template files. Do not edit files in here. *misty* may not work properly if the files in this directory are edited, and updates may overwrite some files too. Don't change anything in there.
+- `skel/`: These are the template files. Do not edit files in here. *misty* may not work properly if the files in this directory are edited, and updates may overwrite some files too. Don’t change anything in there.
 - `usr/`: This is your place to edit configuration files to suit your needs.
 - `Logs/`: A changelog will be created and updated each time updates get imported. Also, there are files for each major version called `previous_state_[major_version].txt`. These are looked up by *misty* on each run. If you want to recreate installers for a major version already present in the repo, please look at the [Testing Methods](testing-methods) section below.
 
@@ -84,7 +91,7 @@ This is a pre-release. Being said that, you are highly encouraged to test it in 
 
 *misty* will do nothing if it thinks all is up to date. If you really are up to date with all three major versions, you can do the following:
 
-1. In the repo, rename the dmg file of the macOS installer to an earlier version. Then, rename all plist files of that version, too. Edit each plist file so the `item_installer_location` is updated to the name of the renamed dmg file. Don’t forget to also adjust the `version` string at the bottom of the files. This will ensure that the removal of older versions (more than two) will get tested.
+1. In the repo, rename the dmg file of the macOS installer to an earlier version. Then, rename all plist files of that version, too. Edit each plist file so the `item_installer_location` is updated to the name of the renamed dmg file. Don’t forget to also adjust the `version` string at the bottom of the files. This will ensure that the removal of older versions (at least two) will get tested.
 2. Alternatively, just delete all plists and the corresponding dmg. If you followed step 1, ignore this step.
 3. Do a `makecatalogs` on the repo.
 4. For each major version that you altered or deleted, you need to edit the file `/Users/Shared/Mist/previous_state_[major_version].txt`. Just change the current version key to another number. You need root permissions for that.
@@ -96,6 +103,7 @@ This is a pre-release. It is working, but we have some tasks on our to-do list:
 
 - Testing in different environments, preferably with SMB shares.
 - Ensure all items that require FDA are mentioned.
+- Move `RepoUser` and `RepoPass` out of a file under `/Users/Shared` being accessible for all users.
 - Check for available space. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values that stops the import process for each major version, but more testing needs to be done to ensure the values are appropriate.
 - Improve message output.
 - Harmonize variable names.
