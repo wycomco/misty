@@ -119,6 +119,7 @@ deploy_macos() {
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
     mv "$pkgsinfodir/$deploy_name-$fqos" "$pkgsinfodir/$deploy_name-$fqos.plist"
+    sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/$deploy_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
         head -n "$localized" "$pkgsinfodir/$deploy_name-$fqos.plist" > "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
@@ -208,6 +209,7 @@ munkiimport_stage_os() {
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
     mv "$pkgsinfodir/$munki_name-$fqos-arm64" "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
     sed -i.tmp \
+        -e "s/root/misty/" \
         -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
         -e 's/installable_condition_disabled/installable_condition/g' \
         -e "s|$munki_path/Install macOS $os_nice-$fqos.dmg|$munki_path/$munki_name-$fqos.dmg|g" \
@@ -244,6 +246,7 @@ munkiimport_startos() {
     plutil -replace installer_item_hash -string "$installer_item_hash_stage_os" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
     plutil -replace installer_item_size -integer "$installer_item_size_stage_os" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
     sed -i.tmp \
+        -e "s/root/misty/" \
         -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
         -e 's/installable_condition_disabled/installable_condition/g' \
         -e "s|$munki_path/Install macOS $os_nice-$fqos.dmg|$munki_path/$munki_name-$fqos.dmg|g" \
@@ -274,6 +277,7 @@ preloader_arm() {
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
     mv "$pkgsinfodir/${munki_name}_arm-$fqos-arm64" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
+    sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
     # Retrieve installable_condition from munkiimport_macos and fill in
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist")
