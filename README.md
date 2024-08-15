@@ -90,6 +90,8 @@ After that, also grant FDA using the same way described for `/bin/zsh` to
 - `/usr/local/munki/munkiimport`
 - `/usr/local/munki/Python.framework/Versions/3.12/Resources/Python.app`
 
+If you are still facing issues, also grant `Terminal.app` (located in `/Applications/Utlities`) Full Disk Access.
+
 ## Testing Methods
 
 This is a pre-release. Being said that, you are highly encouraged to test it in your environment and provide feedback using issues or pull requests.
