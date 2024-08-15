@@ -569,6 +569,7 @@ fi
 if [ -n "$macos_12" ]; then
     fqos=$macos_12
     munki_catalog=$munki_catalog_12
+    munki_mini=6.0.1
     os_major="12"
     os_maxi="11.99"
     os_mini="10.9"
