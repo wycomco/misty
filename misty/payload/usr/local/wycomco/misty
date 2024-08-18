@@ -32,16 +32,27 @@
 ################################################################################
 
 check_daemon() {
-    DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath)
-    DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath)
+    DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath 2>/dev/null)
+    DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath 2>/dev/null)
+    if [[ -z $DaemonHourPlist || -z $DaemonMinutePlist ]]; then
+        echo_err "Error: Failed to read plist file."
+        return 1
+    fi
     # Remove leading zeros if present
     DaemonHourPlist=${DaemonHourPlist#0}
     DaemonMinutePlist=${DaemonMinutePlist#0}
+    local RestartDaemon=0
     if [[ $DaemonHourPlist -ne $DaemonHour ]]; then
         PlistBuddy -c "Set :StartCalendarInterval:Hour $DaemonHour" $DaemonPath
+        RestartDaemon=1
     fi
     if [[ $DaemonMinutePlist -ne $DaemonMinute ]]; then
         PlistBuddy -c "Set :StartCalendarInterval:Minute $DaemonMinute" $DaemonPath
+        RestartDaemon=1
+    fi
+    if [[ RestartDaemon -ne 0 ]]; then
+        launchctl unload $DaemonPath && launchctl load $DaemonPath
+        echo_std "LaunchDaemon start time was altered."
     fi
 }
 
@@ -425,8 +436,8 @@ if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
         echo "# Start of script in the LaunchDaemon" >> "$Base_Path/usr/config.txt"
         echo "time_input=\"$time_input\"" >> "$Base_Path/usr/config.txt"
         if ! launchctl list | grep -q "de.wycomco.misty"; then
-            # Re-enable when LaunchDaemon can access smb shares
-            #launchctl load $DaemonPath
+            launchctl load $DaemonPath
+            echo_std "Loaded LaunchDaemon."
         fi
         echo "Do you want to use localized strings in the resulting plists? (y/n)"
         read yn
