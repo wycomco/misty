@@ -35,7 +35,11 @@ check_daemon() {
     DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath 2>/dev/null)
     DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath 2>/dev/null)
     if [[ -z $DaemonHourPlist || -z $DaemonMinutePlist ]]; then
+<<<<<<< HEAD
         echo_err "Error: Failed to read plist file."
+=======
+        echo "Error: Failed to read plist file."
+>>>>>>> 02935f27571bcf0546c6f933a77d1299f31f58eb
         return 1
     fi
     # Remove leading zeros if present
