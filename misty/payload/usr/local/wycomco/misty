@@ -35,7 +35,7 @@ check_daemon() {
     DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath 2>/dev/null)
     DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath 2>/dev/null)
     if [[ -z $DaemonHourPlist || -z $DaemonMinutePlist ]]; then
-        echo_err "Error: Failed to read plist file."
+        log_message "stderr" "Error: Failed to read plist file."
         return 1
     fi
     # Remove leading zeros if present
@@ -52,7 +52,7 @@ check_daemon() {
     fi
     if [[ RestartDaemon -ne 0 ]]; then
         launchctl unload $DaemonPath && launchctl load $DaemonPath
-        echo_std "LaunchDaemon start time was altered."
+        log_message "stdout" "LaunchDaemon start time was altered."
     fi
 }
 
@@ -71,15 +71,15 @@ check_repo() {
                 sleep $interval
                 ((elapsed+=interval))
                 if [ $elapsed -ge $timeout ]; then
-                    echo_err "Repositories' share cannot be mounted within 30 seconds. Exiting ..."
+                    log_message "stderr" "Repositories' share cannot be mounted within 30 seconds. Exiting ..."
                     exit 1
                 fi
             done
-            echo_std "Share ${RepoShare} was mounted."
+            log_message "stdout" "Share ${RepoShare} was mounted."
         fi
     # 'Elif' loop applicable for locally attached volumes (USB, Thunderbolt)
     elif [[ ! -d "$RepoPath" ]]; then
-        echo_err "Error: Repository \"$RepoPath\" not accessible, please check."
+        log_message "stderr" "Error: Repository \"$RepoPath\" not accessible, please check."
         exit 1
     fi
 }
@@ -93,18 +93,18 @@ check_space() {
     if [[ "$repo_disk" == "$boot_disk" ]]; then
         local total_required_space=$((repo_required + diskspace_required))
         if (( boot_space < total_required_space )); then
-            echo_err "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
+            log_message "stderr" "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
             exit 1
         fi
     fi
 
     if (( repo_space < repo_required )); then
-        echo_err "Less than $repo_required GB space on repo left. Please provide more space."
+        log_message "stderr" "Less than $repo_required GB space on repo left. Please provide more space."
         exit 1
     fi
 
     if (( boot_space < diskspace_required )); then
-        echo_err "Less than $diskspace_required GB space on boot volume left. Please provide more space."
+        log_message "stderr" "Less than $diskspace_required GB space on boot volume left. Please provide more space."
         exit 1
     fi
 }
@@ -119,7 +119,7 @@ cleanup() {
 }
 
 deploy_macos() {
-    echo_std "Creating deployment item for macOS $fqos"
+    log_message "stdout" "Creating deployment item for macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice preparation"  \
     --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
@@ -152,7 +152,7 @@ EOF
 }
 
 download_macos() {
-    echo_std "Downloading installer for macOS $fqos"
+    log_message "stdout" "Downloading installer for macOS $fqos"
     if [[ -t 1 ]]; then
         # Reduce output, but output progress of single steps for interactive run
         mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | tee >(grep 'There is a mist update available') | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
@@ -163,30 +163,6 @@ download_macos() {
                 echo "$line" >> /var/log/misty.log
             fi
         done
-    fi
-}
-
-echo_err() {
-    local date_time=$(get_timestamp)
-    local message="$@"
-    # Check if running as LaunchDaemon
-    if [[ ! -t 1 ]]; then
-        # Print to stderr with timestamp
-        echo "${date_time}  ${message}" >&2
-    else
-        echo "${message}"
-    fi
-}
-
-echo_std() {
-    local date_time=$(get_timestamp)
-    local message="$@"
-    # Check if running as LaunchDaemon
-    if [[ ! -t 1 ]]; then
-        # Print to stdout with timestamp
-        echo "${date_time}  ${message}"
-    else
-        echo "${message}"
     fi
 }
 
@@ -207,8 +183,30 @@ get_timestamp() {
     echo $(date -r "$current_time" +"%Y-%m-%d %H:%M:%S").$milliseconds
 }
 
+# Unified logging function
+log_message() {
+    local log_type="$1"    # Either 'stdout' or 'stderr'
+    shift
+    local date_time=$(get_timestamp)
+    local message="$@"
+
+    if [[ $log_type == "stderr" ]]; then
+        if [[ ! -t 2 ]]; then
+            echo "${date_time}  ${message}" >&2
+        else
+            echo "${message}" >&2
+        fi
+    else
+        if [[ ! -t 1 ]]; then
+            echo "${date_time}  ${message}"
+        else
+            echo "${message}"
+        fi
+    fi
+}
+
 munkiimport_stage_os() {
-    echo_std "Performing munkiimport for ARM version of macOS $fqos"
+    log_message "stdout" "Performing munkiimport for ARM version of macOS $fqos"
     munkiimport -n --installer-type stage_os_installer --name="$munki_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice" --description="Downloads macOS $os_nice $fqos" \
@@ -242,7 +240,7 @@ munkiimport_stage_os() {
 }
 
 munkiimport_startos() {
-    echo_std "Performing munkiimport for Intel version of macOS $fqos"
+    log_message "stdout" "Performing munkiimport for Intel version of macOS $fqos"
     munkiimport -n --installer-type startosinstall --name="$munki_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice" --description="Installs macOS $os_nice $fqos" \
@@ -280,7 +278,7 @@ munkiimport_startos() {
 }
 
 preloader_arm() {
-    echo_std "Creating preloader for ARM version of macOS $fqos"
+    log_message "stdout" "Creating preloader for ARM version of macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
@@ -331,7 +329,7 @@ rm_color_codes() {
 rm_previous_files() {
     setopt nullglob
     if ! ls -1 "$pkgsdir"/"$munki_name"-"$os_major"* >/dev/null 2>&1; then
-        echo_std "No files matching $munki_name version $os_major found. Not removing any files."
+        log_message "stdout" "No files matching $munki_name version $os_major found. Not removing any files."
         return
     fi
 
@@ -369,14 +367,14 @@ rm_previous_files() {
             rm -f "${pkgsinfodir}"/*"${file}".plist
             rm -f "${pkgsinfodir}"/arm64/*"${file}".plist
             rm -f "${pkgsinfodir}"/x86_64/*"${file}".plist
-            echo_std "Removed macOS version(s) ${file} from pkgs and pkgsinfo directories."
+            log_message "stdout" "Removed macOS version(s) ${file} from pkgs and pkgsinfo directories."
             files_deleted=true
         done
     done
 
     # Check if only one version was found or if no files were deleted
     if [ "$initial_versions" -eq 1 ] || [ "$files_deleted" = false ]; then
-        echo_std "Only one previous version of macOS ${os_nice} present in repository. Not removing any files."
+        log_message "stdout" "Only one previous version of macOS ${os_nice} present in repository. Not removing any files."
     fi
 }
 
@@ -386,6 +384,9 @@ rm_previous_files() {
 
 export PATH="/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
 
+# Redirecting stderr to the log_message function
+exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
+
 repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
 diskspace_required=30 # Size required on boot disk for installer and cache in GB
 Base_Path="/Users/Shared/Mist"
@@ -394,24 +395,24 @@ Template="$Base_Path/skel"
 DaemonPath="/Library/LaunchDaemons/de.wycomco.misty.plist"
 
 if [[ $EUID -ne 0 ]]; then
-   echo_err "Please run the script as root." 
+   log_message "stderr" "Please run the script as root." 
    exit 1
 fi
 mist_check=$(which mist)
 if [ $? -ne 0 ]; then
-    echo_err "Error: mist not found. Please install mist-cli or put it into the PATH."
+    log_message "stderr" "Error: mist not found. Please install mist-cli or put it into the PATH."
     exit 1
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
-    echo_err "Error: munkiimport not found. Please check your munki installation."
+    log_message "stderr" "Error: munkiimport not found. Please check your munki installation."
     exit 1
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
-    echo_err "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
+    log_message "stderr" "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
     exit 1
 fi
 
@@ -437,7 +438,7 @@ if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
         echo "time_input=\"$time_input\"" >> "$Base_Path/usr/config.txt"
         if ! launchctl list | grep -q "de.wycomco.misty"; then
             launchctl load $DaemonPath
-            echo_std "Loaded LaunchDaemon."
+            log_message "stdout" "Loaded LaunchDaemon."
         fi
         echo "Do you want to use localized strings in the resulting plists? (y/n)"
         read yn
@@ -495,7 +496,7 @@ pkgsinfodir="$RepoPath/pkgsinfo/$munki_path"
 
 # Only execute if run as launchd
 if [[ ! -t 1 ]]; then
-    echo_std "Start of misty run."
+    log_message "stdout" "Start of misty run."
 fi
 
 check_repo
@@ -609,7 +610,7 @@ if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) ]]; then
     makecatalogs "$RepoPath" | grep 'warning'
 fi
 
-echo_std "Finished misty run."
+log_message "stdout" "Finished misty run."
 # Enter an empty line if run as launchd to StandardOutPath
 if [[ ! -t 1 ]]; then
     echo
