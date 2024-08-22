@@ -46,6 +46,8 @@ During the first run, a LaunchDaemon (`/Library/LaunchDaemons/de.wycomco.misty.p
 - `localization`: Set to `yes` if you support different languages other than English in your munki repository.
 - `time_input`: Enter the desired start time for automated runs.
 
+A note on SMB shares: On an Almalinux Samba share, credentials were not needed (misty invoked by launchd was able to access the repo that was already mounted in user context). On a Windows SMB share, the share had to be mounted no matter if the share was already mounted in user context or not. So you may or may not have to enter `RepoUser`, `RepoPass` and `RepoName` values.
+
 ### Subsequent Runs
 
 During each run, the values specified in `/Users/Shared/Mist/usr/config.txt` will be used. Note: When changing the start time for the LaunchDaemon in the configuration file, the value will be changed during the next run of *misty*.
@@ -104,11 +106,15 @@ This is a pre-release. Being said that, you are highly encouraged to test it in 
 4. For each major version that you altered or deleted, you need to edit the file `/Users/Shared/Mist/previous_state_[major_version].txt`. Just change the current version key to another number. You need root permissions for that.
 5. Then you can run *misty* manually or wait for the LaunchDaemon to do its job.
 
+## Known issues
+
+- The reload of the launchdaemon does not work if *misty* was invoked by its launchdaemon. Please run *misty* in Terminal using `sudo misty` if you have changed the start time in the config file. This will trigger a proper reload of the daemon (and do nothing else unless a new macOS version is found).
+
 ## To Do
 
 This is a pre-release. It is working, but we have some tasks on our to-do list:
 
-- Testing in different environments, preferably with SMB shares.
+- Testing in different environments, preferably with SMB and Samba shares.
 - Ensure all items that require FDA are mentioned.
 - Move `RepoUser` and `RepoPass` out of a file under `/Users/Shared` being accessible for all users.
 - Check for available space. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values that stops the import process for each major version, but more testing needs to be done to ensure the values are appropriate.
