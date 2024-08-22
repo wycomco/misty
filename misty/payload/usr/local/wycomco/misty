@@ -51,8 +51,25 @@ check_daemon() {
         RestartDaemon=1
     fi
     if [[ RestartDaemon -ne 0 ]]; then
-        launchctl unload $DaemonPath && launchctl load $DaemonPath
-        log_message "stdout" "LaunchDaemon start time was altered."
+        if [[ ! -t 1 ]]; then
+            # Write the unload/reload commands to a separate script
+            cat << EOF > /tmp/reload_mistydaemon.sh
+#!/bin/zsh
+# Wait until misty has finished
+sleep 20
+/bin/launchctl bootout system $DaemonPath >> /var/log/misty.log 2>&1
+sleep 120 # enough time to check status of launchdaemon
+/bin/launchctl bootstrap system $DaemonPath >> /var/log/misty.log 2>&1
+EOF
+            chmod +x /tmp/reload_mistydaemon.sh
+            # Run the script asynchronously to avoid terminating the current process
+            /tmp/reload_mistydaemon.sh &>> /var/log/misty.log &
+            log_message "stdout" "Daemon unload/reload scheduled."
+            echo
+        else
+            launchctl unload $DaemonPath && launchctl load $DaemonPath
+            log_message "stdout" "LaunchDaemon start time was altered."
+        fi
     fi
 }
 
@@ -382,7 +399,7 @@ rm_previous_files() {
 # Global definitions, checks                                                   #
 ################################################################################
 
-export PATH="/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
+export PATH="/bin:/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
 
 # Redirecting stderr to the log_message function
 exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
@@ -514,7 +531,6 @@ if [[ ! -d "$pkgsinfodir"/x86_64 ]]; then
     chmod 755 "$pkgsinfodir/x86_64"
     chown "$Repo_uid_gid" "$pkgsinfodir/x86_64"
 fi
-check_daemon
 
 ################################################################################
 # Update checks                                                                #
@@ -616,4 +632,5 @@ if [[ ! -t 1 ]]; then
     echo
 fi
 
+check_daemon
 exit 0
