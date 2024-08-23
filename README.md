@@ -4,6 +4,8 @@ This script checks for the availability of new macOS releases currently supporte
 
 Since this is a pre-release with frequent updates, the binary has not yet been signed or notarized. To open the downloaded installer, please right-click the `.pkg` file and select 'Open'.
 
+See the [Changelog](./CHANGELOG.md) for details on version history and updates.
+
 ## Goals of this Script
 
 If a new update for any major version is found, it will be imported into the munki repo, creating the following installers:
