@@ -35,7 +35,7 @@ check_daemon() {
     DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath 2>/dev/null)
     DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath 2>/dev/null)
     if [[ "$DaemonTime" == "invalid" ]]; then
-        log_message "stderr" "Error: Time input from config.txt is invalid, not changing launchdaemon"
+        # Time input from config.txt is invalid, not changing launchdaemon
         return 1
     fi
     if [[ -z $DaemonHourPlist || -z $DaemonMinutePlist ]]; then
