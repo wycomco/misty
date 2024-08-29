@@ -27,9 +27,9 @@ The script does not have any command line options. You specify them in the confi
 
 ### First Run: Customization
 
-Please run the script using `sudo misty`. The script will then create a `usr/` subfolder in `/Users/Shared/Mist/`, which should already be present after installing *mist-cli*. A configuration file will be created that you should customize to suit your needs. The script will also ask if you require localizations. If you do, localization templates for the relevant plist files will be copied to the `usr/` subfolder, which you should adjust to your language(s).
+Please run the script using `sudo misty`. The script will then create a `usr/` subfolder in `/var/root/misty/`. The subfolder `misty` will be created automatically during installation. A configuration file will be created that you should customize to suit your needs. You need root privileges to access the folder `/var/root/misty/` and any subfolders or files in it. The script will also ask if you require localizations. If you do, localization templates for the relevant plist files will be copied to the `usr/` subfolder, which you should adjust to your language(s).
 
-You can also place a script called `postinstall.sh` into your usr folder that will be executed after each new import of at least one major version. Make sure it is executable by running `chmod +x /Users/Shared/Mist/usr/postinstall.sh` in the terminal. The script will run after the misty run has finished, so you may find it useful for `sed`ing plists or altering anything else that is not covered by *misty* itself.
+You can also place a script called `postinstall.sh` into your usr folder that will be executed after each new import of at least one major version. Make sure it is executable by running `chmod +x /var/root/misty/usr/postinstall.sh` in the terminal. The script will run after the misty run has finished, so you may find it useful for `sed`ing plists or altering anything else that is not covered by *misty* itself.
 
 During the first run, a LaunchDaemon (`/Library/LaunchDaemons/de.wycomco.misty.plist`) will be enabled if not running yet. You will be asked at what time *misty* should run.
 
@@ -118,7 +118,6 @@ This is a pre-release. It is working, but we have some tasks on our to-do list:
 
 - Testing in different environments, preferably with SMB and Samba shares.
 - Ensure all items that require FDA are mentioned.
-- Move `RepoUser` and `RepoPass` out of a file under `/Users/Shared` being accessible for all users.
 - Check for available space. We need to check the space on the munki repo, but more importantly, the space on the system disk. If not enough space is available, the resulting installer .app will not be complete, resulting in unusable plists and payloads being offered to clients. There exists a check with hard-coded values that stops the import process for each major version, but more testing needs to be done to ensure the values are appropriate.
 - Improve message output.
 - Harmonize variable names.
