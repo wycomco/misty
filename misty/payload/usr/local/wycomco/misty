@@ -34,6 +34,10 @@
 check_daemon() {
     DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath 2>/dev/null)
     DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath 2>/dev/null)
+    if [[ "$DaemonTime" == "invalid" ]]; then
+        # Time input from config.txt is invalid, not changing launchdaemon
+        return 1
+    fi
     if [[ -z $DaemonHourPlist || -z $DaemonMinutePlist ]]; then
         log_message "stderr" "Error: Failed to read plist file."
         return 1
@@ -188,10 +192,23 @@ extract_macos_version() {
 }
 
 extract_time_input() {
+    if [[ ! $time_input =~ ^[0-9]{1,2}:[0-9]{1,2}$ ]]; then
+        log_message "stderr" "Error: Invalid format for variable time_input in config.txt. Expected format is HH:MM."
+        DaemonTime="invalid"
+    fi
     DaemonHour=$(echo $time_input | cut -d: -f1)
     DaemonMinute=$(echo $time_input | cut -d: -f2)
+    # Remove leading zeros if present
     DaemonHour=${DaemonHour#0}
     DaemonMinute=${DaemonMinute#0}
+    if [[ ! $DaemonHour =~ ^([0-9]|1[0-9]|2[0-3])$ ]]; then
+        log_message "stderr" "Error: Invalid hour in config.txt. Hours must be between 0 and 23."
+        DaemonTime="invalid"
+    fi
+    if [[ ! $DaemonMinute =~ ^([0-9]|[1-5][0-9])$ ]]; then
+        log_message "stderr" "Error: Invalid minute in config.txt. Minutes must be between 0 and 59."
+        DaemonTime="invalid"
+    fi
 }
 
 get_timestamp() {
