@@ -19,5 +19,3 @@ munki_catalog_14="testing"
 munki_category="Utilities"
 # If turned to "yes", localizations will be used. If not present yet, copy the files starting with "localized_" from the skel/ dir into the usr/ folder and adjust to your needs
 localization="no"
-# Start of script in the LaunchDaemon
-time_input="22:00"
