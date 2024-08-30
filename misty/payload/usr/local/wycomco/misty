@@ -423,7 +423,7 @@ exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
 
 repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
 diskspace_required=30 # Size required on boot disk for installer and cache in GB
-Base_Path="/Users/Shared/Mist"
+Base_Path="/var/root/misty"
 LogPath="$Base_Path/Logs"
 Template="$Base_Path/skel"
 DaemonPath="/Library/LaunchDaemons/de.wycomco.misty.plist"
@@ -444,6 +444,7 @@ if [ $? -ne 0 ]; then
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
+    chmod 0700 "$LogPath"
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
     log_message "stderr" "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
@@ -456,10 +457,10 @@ fi
 
 if [[ ! -d "$Base_Path/usr" ]]; then
     mkdir -p "$Base_Path/usr"
-    chmod 777 "$Base_Path/usr"
+    chmod 0700 "$Base_Path"
+    chmod 0700 "$Base_Path/usr"
 fi
 if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
-    currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
     cp "$Template/config.txt" "$Base_Path/usr"
     while true; do
         echo
@@ -480,18 +481,10 @@ if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
             [Yy]* )
             cp "$Template/localized_arm.txt" "$Template/localized_deploy.txt" "$Template/localized_stage_os.txt" "$Template/localized_startos.txt" "$Base_Path/usr"
             sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/config.txt
-            echo "Please adjust the file config.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
-            chmod 666 "$Base_Path/usr/*.txt"
-            echo "A finder window will open in 5 seconds."
-            sleep 5
-            su -l "$currentUser" -c "open $Base_Path/usr"
+            echo "Please adjust the file config.txt and any localized_*.txt files in $Base_Path/usr to your needs now using an editor like vi or nano."
             exit 0 ;;
             [Nn]* )
-            echo "Please adjust the file $Base_Path/usr/config.txt to your needs now."
-            chmod 666 "$Base_Path/usr/*.txt"
-            echo "A finder window will open in 5 seconds."
-            sleep 5
-            su -l "$currentUser" -c "open $Base_Path/usr"
+            echo "Please adjust the file $Base_Path/usr/config.txt to your needs now using an editor like vi or nano."
             exit 0;;
             * ) echo "Please answer using [y] or [n].";;
         esac
@@ -502,8 +495,8 @@ fi
 # Import config, more definitions                                              #
 ################################################################################
 
-# Load definitions from config file in /Users/Shared/Mist/usr
-source "$Base_Path"/usr/config.txt
+# Load definitions from config file in /var/root/misty/usr
+source "$Base_Path/usr/config.txt"
 echo "RepoPath: $RepoPath" > /dev/null
 echo "Is_SMB: $Is_SMB" > /dev/null
 echo "RepoUser: $RepoUser" > /dev/null
