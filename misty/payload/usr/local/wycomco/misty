@@ -462,6 +462,7 @@ if [[ ! -d "$Base_Path/usr" ]]; then
 fi
 if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
     cp "$Template/config.txt" "$Base_Path/usr"
+    log_message "stdout" "Config file created in $Base_Path/usr/"
     while true; do
         echo
         echo "Please enter the time when the script should start in 24 hour format (HH:MM): "
