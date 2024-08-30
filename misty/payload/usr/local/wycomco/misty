@@ -419,8 +419,10 @@ rm_previous_files() {
 
 export PATH="/bin:/usr/bin:/usr/libexec:/usr/local/bin:/usr/local/munki:/usr/sbin:$PATH"
 
-# Redirecting stderr to the log_message function
-exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
+# Ensure error messages from external programs also get prepended by a timestamp if not running in a terminal
+if [[ ! -t 1 ]]; then
+    exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
+fi
 
 repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
 diskspace_required=30 # Size required on boot disk for installer and cache in GB

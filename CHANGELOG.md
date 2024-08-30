@@ -6,6 +6,9 @@
 ### Security
 - Sanity check for launchdaemon’s start time
 
+### Fixed
+- Error messages only get prepended by a timestamp if *misty* is running as a launchd job
+
 ### Info
 - See [Testing methods](./README.md#testing-methods) and [To do](./README.md#to-do) sections of the README if you plan to use *misty* at the current state.
 
