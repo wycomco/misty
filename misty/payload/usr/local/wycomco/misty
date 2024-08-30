@@ -192,6 +192,7 @@ extract_macos_version() {
 }
 
 extract_time_input() {
+    DaemonTime="valid"
     if [[ ! $time_input =~ ^[0-9]{1,2}:[0-9]{1,2}$ ]]; then
         log_message "stderr" "Error: Invalid format for variable time_input in config.txt. Expected format is HH:MM."
         DaemonTime="invalid"
@@ -465,9 +466,18 @@ if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
     log_message "stdout" "Config file created in $Base_Path/usr/"
     while true; do
         echo
-        echo "Please enter the time when the script should start in 24 hour format (HH:MM): "
-        read time_input
-        extract_time_input
+        # Loop to prompt user for valid time input
+        while true; do
+            echo "Please enter the time when the script should start in 24-hour format (HH:MM): "
+            read time_input
+            extract_time_input
+            # If time is valid, break the loop
+            if [[ $DaemonTime != "invalid" ]]; then
+                break
+            else
+                echo "Invalid time format. Please enter a valid time in HH:MM format."
+            fi
+        done
         PlistBuddy -c "Set :StartCalendarInterval:Hour $DaemonHour" $DaemonPath
         PlistBuddy -c "Set :StartCalendarInterval:Minute $DaemonMinute" $DaemonPath
         echo "# Start of script in the LaunchDaemon" >> "$Base_Path/usr/config.txt"
