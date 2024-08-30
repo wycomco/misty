@@ -416,7 +416,7 @@ rm_previous_files() {
 # Global definitions, checks                                                   #
 ################################################################################
 
-export PATH="/bin:/usr/bin:/usr/libexec:/usr/local/bin:/usr/local/munki:/usr/sbin:$PATH"
+export PATH="/bin:/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
 
 # Redirecting stderr to the log_message function
 exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
