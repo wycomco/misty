@@ -134,7 +134,7 @@ cleanup() {
     chown "$Repo_uid_gid" "$pkgsdir/$munki_name-$fqos.dmg"
     chown "$Repo_uid_gid" "$pkgsinfodir/arm64/${munki_name}-$fqos.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" \
     "$pkgsinfodir/$deploy_name-$fqos.plist" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    rm -rf "$Base_Path/Install macOS $os_nice.app"
+    rm -rf "$Mist_Path/Install macOS $os_nice.app"
     mv "$LogPath"/current_state_"$os_major".txt "$LogPath"/previous_state_"$os_major".txt
     echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
 }
@@ -249,7 +249,7 @@ munkiimport_stage_os() {
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --arch=arm64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
-    --pkgvers="$fqos" "$Base_Path/Install macOS $os_nice.app" > /dev/null
+    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
     sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
@@ -283,7 +283,7 @@ munkiimport_startos() {
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --arch=x86_64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" \
-    --pkgvers="$fqos" "$Base_Path/Install macOS $os_nice.app" > /dev/null
+    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
     sleep 20 # wait for plist to be created
     rm "$pkgsdir/Install macOS $os_nice-$fqos.dmg"
     mv "$pkgsinfodir/$munki_name-$fqos-x86_64" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
@@ -427,6 +427,7 @@ fi
 repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
 diskspace_required=30 # Size required on boot disk for installer and cache in GB
 Base_Path="/var/root/misty"
+Mist_Path="/Users/Shared/Mist"
 LogPath="$Base_Path/Logs"
 Template="$Base_Path/skel"
 DaemonPath="/Library/LaunchDaemons/de.wycomco.misty.plist"
