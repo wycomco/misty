@@ -2,7 +2,9 @@
 
 This script checks for the availability of new macOS releases currently supported by Apple, using *mist-cli* (not included in this project’s installer). It also requires a *munki* repo to be already set up. Please see the [System Requirements](#system-requirements) section below for links.
 
-Since this is a pre-release with frequent updates, the binary has not yet been signed or notarized. To open the downloaded installer, please right-click the `.pkg` file and select 'Open'.
+*misty* can be used with a local repository and with SMB or Samba shares.
+
+Since this is a pre-release with frequent updates, the installer has not yet been signed or notarized. To run the downloaded installer, please right-click the `.pkg` file and select 'Open'.
 
 See the [Changelog](./CHANGELOG.md) for details on version history and updates.
 
@@ -58,13 +60,15 @@ Each run of *misty* compares the full versions of each major version in the `Log
 
 ## Folder Structure
 
-As mentioned above, *mist-cli* is required for running this script. Its installer creates a folder `Mist` inside `/Users/Shared`. We are using this folder. Inside that folder, we have several subfolders:
+As mentioned above, *mist-cli* is required for running this script. Its installer creates a folder `Mist` inside `/Users/Shared`. New macOS versions are downloaded to that folder and `munkiimport`ed from that location. After successful import, the installers will be deleted.
+
+We also create a folder `misty` under `/var/root/`. Inside that folder, we have several subfolders:
 
 - `skel/`: These are the template files. Do not edit files in here. *misty* may not work properly if the files in this directory are edited, and updates may overwrite some files too. Don’t change anything in there.
 - `usr/`: This is your place to edit configuration files to suit your needs.
 - `Logs/`: A changelog will be created and updated each time updates get imported. Also, there are files for each major version called `previous_state_[major_version].txt`. These are looked up by *misty* on each run. If you want to recreate installers for a major version already present in the repo, please look at the [Testing Methods](testing-methods) section below.
 
-During the packaging process, the installer for the respective major version will be present inside the `/Users/Shared/Mist` folder. It is deleted after all related plists have been created.
+When run as a launchd job, the log files `/var/log/misty.log` (for stdout) and `/var/log/misty_error.log` (for stderr) will be created.
 
 The script *misty* itself is located in `/usr/local/wycomo` and has an alias in `/usr/local/bin/`.
 
@@ -96,11 +100,15 @@ After that, also grant FDA using the same way described for `/bin/zsh` to
 
 If you are still facing issues, also grant `Terminal.app` (located in `/Applications/Utlities`) Full Disk Access.
 
-## Testing Methods
+## Contributing
 
 This is a pre-release. Being said that, you are highly encouraged to test it in your environment and provide feedback using issues or pull requests.
 
-*misty* will do nothing if it thinks all is up to date. If you really are up to date with all three major versions, you can do the following:
+*misty* makes use of [git-flow](https://github.com/nvie/gitflow). Branch name for production releases is *main*, branch name for "next release" development is *dev*. The version tag prefix is *v*. All other values are the default ones. You can install git-flow using [homebrew](https://brew.sh/) by entering `brew install git-flow` in the terminal.
+
+### Testing methods
+
+*misty* will do nothing if it thinks all is up to date. If you are up to date with all three major versions in the repo, you can do the following:
 
 1. In the repo, rename the dmg file of the macOS installer to an earlier version. Then, rename all plist files of that version, too. Edit each plist file so the `item_installer_location` is updated to the name of the renamed dmg file. Don’t forget to also adjust the `version` string at the bottom of the files. This will ensure that the removal of older versions (at least two) will get tested.
 2. Alternatively, just delete all plists and the corresponding dmg. If you followed step 1, ignore this step.
@@ -108,7 +116,7 @@ This is a pre-release. Being said that, you are highly encouraged to test it in 
 4. For each major version that you altered or deleted, you need to edit the file `/Users/Shared/Mist/previous_state_[major_version].txt`. Just change the current version key to another number. You need root permissions for that.
 5. Then you can run *misty* manually or wait for the LaunchDaemon to do its job.
 
-## Known issues
+## Known Issues
 
 - The reload of the launchdaemon does not work if *misty* was invoked by its launchdaemon. Please run *misty* in Terminal using `sudo misty` if you have changed the start time in the config file. This will trigger a proper reload of the daemon (and do nothing else unless a new macOS version is found).
 
