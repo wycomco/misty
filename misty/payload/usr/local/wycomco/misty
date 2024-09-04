@@ -134,7 +134,7 @@ cleanup() {
     chown "$Repo_uid_gid" "$pkgsdir/$munki_name-$fqos.dmg"
     chown "$Repo_uid_gid" "$pkgsinfodir/arm64/${munki_name}-$fqos.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" \
     "$pkgsinfodir/$deploy_name-$fqos.plist" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    rm -rf "$Base_Path/Install macOS $os_nice.app"
+    rm -rf "$Mist_Path/Install macOS $os_nice.app"
     mv "$LogPath"/current_state_"$os_major".txt "$LogPath"/previous_state_"$os_major".txt
     echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
 }
@@ -192,6 +192,7 @@ extract_macos_version() {
 }
 
 extract_time_input() {
+    DaemonTime="valid"
     if [[ ! $time_input =~ ^[0-9]{1,2}:[0-9]{1,2}$ ]]; then
         log_message "stderr" "Error: Invalid format for variable time_input in config.txt. Expected format is HH:MM."
         DaemonTime="invalid"
@@ -248,7 +249,7 @@ munkiimport_stage_os() {
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --arch=arm64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
-    --pkgvers="$fqos" "$Base_Path/Install macOS $os_nice.app" > /dev/null
+    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
     sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
@@ -282,7 +283,7 @@ munkiimport_startos() {
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --arch=x86_64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" \
-    --pkgvers="$fqos" "$Base_Path/Install macOS $os_nice.app" > /dev/null
+    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
     sleep 20 # wait for plist to be created
     rm "$pkgsdir/Install macOS $os_nice-$fqos.dmg"
     mv "$pkgsinfodir/$munki_name-$fqos-x86_64" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
@@ -416,14 +417,17 @@ rm_previous_files() {
 # Global definitions, checks                                                   #
 ################################################################################
 
-export PATH="/bin:/usr/bin:/usr/local/bin:/usr/local/munki:/usr/libexec:$PATH"
+export PATH="/bin:/usr/bin:/usr/libexec:/usr/local/bin:/usr/local/munki:/usr/sbin:$PATH"
 
-# Redirecting stderr to the log_message function
-exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
+# Ensure error messages from external programs also get prepended by a timestamp if not running in a terminal
+if [[ ! -t 1 ]]; then
+    exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
+fi
 
 repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
 diskspace_required=30 # Size required on boot disk for installer and cache in GB
-Base_Path="/Users/Shared/Mist"
+Base_Path="/var/root/misty"
+Mist_Path="/Users/Shared/Mist"
 LogPath="$Base_Path/Logs"
 Template="$Base_Path/skel"
 DaemonPath="/Library/LaunchDaemons/de.wycomco.misty.plist"
@@ -444,6 +448,7 @@ if [ $? -ne 0 ]; then
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
+    chmod 0700 "$LogPath"
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
     log_message "stderr" "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
@@ -456,16 +461,26 @@ fi
 
 if [[ ! -d "$Base_Path/usr" ]]; then
     mkdir -p "$Base_Path/usr"
-    chmod 777 "$Base_Path/usr"
+    chmod 0700 "$Base_Path"
+    chmod 0700 "$Base_Path/usr"
 fi
 if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
-    currentUser=$(echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }')
     cp "$Template/config.txt" "$Base_Path/usr"
+    log_message "stdout" "Config file created in $Base_Path/usr/"
     while true; do
         echo
-        echo "Please enter the time when the script should start in 24 hour format (HH:MM): "
-        read time_input
-        extract_time_input
+        # Loop to prompt user for valid time input
+        while true; do
+            echo "Please enter the time when the script should start in 24-hour format (HH:MM): "
+            read time_input
+            extract_time_input
+            # If time is valid, break the loop
+            if [[ $DaemonTime != "invalid" ]]; then
+                break
+            else
+                echo "Invalid time format. Please enter a valid time in HH:MM format."
+            fi
+        done
         PlistBuddy -c "Set :StartCalendarInterval:Hour $DaemonHour" $DaemonPath
         PlistBuddy -c "Set :StartCalendarInterval:Minute $DaemonMinute" $DaemonPath
         echo "# Start of script in the LaunchDaemon" >> "$Base_Path/usr/config.txt"
@@ -480,18 +495,10 @@ if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
             [Yy]* )
             cp "$Template/localized_arm.txt" "$Template/localized_deploy.txt" "$Template/localized_stage_os.txt" "$Template/localized_startos.txt" "$Base_Path/usr"
             sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/config.txt
-            echo "Please adjust the file config.txt and any localized_*.txt files in $Base_Path/usr to your needs now."
-            chmod 666 "$Base_Path/usr/*.txt"
-            echo "A finder window will open in 5 seconds."
-            sleep 5
-            su -l "$currentUser" -c "open $Base_Path/usr"
+            echo "Please adjust the file config.txt and any localized_*.txt files in $Base_Path/usr to your needs now using an editor like vi or nano."
             exit 0 ;;
             [Nn]* )
-            echo "Please adjust the file $Base_Path/usr/config.txt to your needs now."
-            chmod 666 "$Base_Path/usr/*.txt"
-            echo "A finder window will open in 5 seconds."
-            sleep 5
-            su -l "$currentUser" -c "open $Base_Path/usr"
+            echo "Please adjust the file $Base_Path/usr/config.txt to your needs now using an editor like vi or nano."
             exit 0;;
             * ) echo "Please answer using [y] or [n].";;
         esac
@@ -502,8 +509,8 @@ fi
 # Import config, more definitions                                              #
 ################################################################################
 
-# Load definitions from config file in /Users/Shared/Mist/usr
-source "$Base_Path"/usr/config.txt
+# Load definitions from config file in /var/root/misty/usr
+source "$Base_Path/usr/config.txt"
 echo "RepoPath: $RepoPath" > /dev/null
 echo "Is_SMB: $Is_SMB" > /dev/null
 echo "RepoUser: $RepoUser" > /dev/null

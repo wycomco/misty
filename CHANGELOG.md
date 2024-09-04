@@ -3,11 +3,19 @@
 
 ## Unreleased
 
-### Security
-- Sanity check for launchdaemon’s start time
-
 ### Info
-- See [Testing methods](./README.md#testing-methods) and [To do](./README.md#to-do) sections of the README if you plan to use *misty* at the current state.
+- See [Testing methods](./README.md#testing-methods) and [To Do](./README.md#to-do) sections of the README if you plan to use *misty* at the current state.
+
+
+## [0.2.1](https://github.com/wycomco/misty/releases/tag/v0.2.1) – 2024-09-04 (Pre-release)
+
+### Security
+- Sanity check for launchdaemon’s start time – [PR#1](https://github.com/wycomco/misty/pull/1), [PR#10](https://github.com/wycomco/misty/pull/10)
+- Move *misty* dirs (usr, skel, Logs) from `/Users/Shared/Mist` to `/var/root/misty` – [PR#4](https://github.com/wycomco/misty/pull/4), [PR#13](https://github.com/wycomco/misty/pull/13)
+
+### Fixed
+- Error messages only get prepended by a timestamp if *misty* is running as a launchd job – [PR#11](https://github.com/wycomco/misty/pull/11)
+- Removed initial start value for LaunchDaemon in config.txt (fix for [0.1.7](https://github.com/wycomco/misty/releases/tag/v0.1.7)) – [PR#8](https://github.com/wycomco/misty/pull/8)
 
 
 ## [0.2.0](https://github.com/wycomco/misty/releases/tag/v0.2.0) – 2024-08-22 (Pre-release)
