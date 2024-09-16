@@ -1,5 +1,25 @@
 #!/bin/zsh
 
+config_file="/var/root/misty/usr/config.txt"
+currentUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+log_file="/var/log/misty.log"
+
+# Check if config file already exists
+if [[ -f "$config_file" ]]; then
+  if grep -q '^munki_catalog_12="' "$config_file"; then
+    sed -i '' '/^munki_catalog_12="/d' "$config_file"
+    echo "Removed 'munki_catalog_12' line in $config_file by installer." >> "$log_file"
+  fi
+  if ! grep -q '^munki_catalog_15="' "$config_file"; then
+    # Add the 'munki_catalog_15="testing"' line after any line that starts with 'munki_catalog_14="'
+    sed -i '' '/^munki_catalog_14="/a\
+munki_catalog_15="testing"
+' "$config_file"
+    echo "Added 'munki_catalog_15=\"testing\"' after 'munki_catalog_14' by installer." >> "$log_file"
+    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added munki_catalog_15=\"testing\" after munki_catalog_14 by installer."'
+  fi
+fi
+
 if [ ! -L "/usr/local/bin/misty" ]; then
     ln -s "/usr/local/wycomco/misty" "/usr/local/bin/misty"
 fi
