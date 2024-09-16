@@ -15,8 +15,8 @@ if [[ -f "$config_file" ]]; then
     sed -i '' '/^munki_catalog_14="/a\
 munki_catalog_15="testing"
 ' "$config_file"
-    echo "Added 'munki_catalog_15=\"testing\"' after 'munki_catalog_14' by installer." >> "$log_file"
-    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added munki_catalog_15=\"testing\" after munki_catalog_14 by installer."'
+    echo "Added 'munki_catalog_15=\"testing\"' line after 'munki_catalog_14' in $config_file by installer." >> "$log_file"
+    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added munki_catalog_15=\"testing\" line after munki_catalog_14 in $config_file by installer."'
   fi
 fi
 
