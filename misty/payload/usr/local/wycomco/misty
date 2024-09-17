@@ -519,9 +519,9 @@ echo "RepoName: $RepoName" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
 echo "munki_name: $munki_name" > /dev/null
 echo "deploy_name: $deploy_name" > /dev/null
-echo "munki_catalog_12: $munki_catalog_12" > /dev/null
 echo "munki_catalog_13: $munki_catalog_13" > /dev/null
 echo "munki_catalog_14: $munki_catalog_14" > /dev/null
+echo "munki_catalog_15: $munki_catalog_15" > /dev/null
 echo "munki_category: $munki_category" > /dev/null
 echo "time_input: $time_input" > /dev/null
 echo "localization: $localization" > /dev/null
@@ -561,17 +561,25 @@ fi
 ################################################################################
 
 # We want to check each major version seperately
+mist list installer 15 --latest | grep GB > "$LogPath/tmp_state_15.txt"
 mist list installer 14 --latest | grep GB > "$LogPath/tmp_state_14.txt"
 mist list installer 13 --latest | grep GB > "$LogPath/tmp_state_13.txt"
-mist list installer 12 --latest | grep GB > "$LogPath/tmp_state_12.txt"
 
 # Remove color codes resulting from grep and clean up
+rm_color_codes "$LogPath/tmp_state_15.txt" > "$LogPath/current_state_15.txt"
 rm_color_codes "$LogPath/tmp_state_14.txt" > "$LogPath/current_state_14.txt"
 rm_color_codes "$LogPath/tmp_state_13.txt" > "$LogPath/current_state_13.txt"
-rm_color_codes "$LogPath/tmp_state_12.txt" > "$LogPath/current_state_12.txt"
 /bin/rm -f "$LogPath/tmp_state_*.txt"
 
 # Compare the content with the previous state if present, ignoring last two columns (date and compatibliity)
+if [ -f "$LogPath/previous_state_15.txt" ]; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_15.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_15.txt"); then
+        macos_15=$(extract_macos_version Sequoia "$LogPath/current_state_15.txt")
+    fi
+else
+    macos_15=$(extract_macos_version Sequoia "$LogPath/current_state_15.txt")
+fi
+
 if [ -f "$LogPath/previous_state_14.txt" ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_14.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_14.txt"); then
         macos_14=$(extract_macos_version Sonoma "$LogPath/current_state_14.txt")
@@ -588,14 +596,6 @@ else
     macos_13=$(extract_macos_version Ventura "$LogPath/current_state_13.txt")
 fi
 
-if [ -f "$LogPath/previous_state_12.txt" ]; then
-    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_12.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_12.txt"); then
-        macos_12=$(extract_macos_version Monterey "$LogPath/current_state_12.txt")
-    fi
-else
-    macos_12=$(extract_macos_version Monterey "$LogPath/current_state_12.txt")
-fi
-
 # Clean up tmp files
 rm -rf "$LogPath/tmp_state_*.txt"
 
@@ -604,6 +604,17 @@ rm -rf "$LogPath/tmp_state_*.txt"
 ################################################################################
 
 # Execute loops only if version has changed
+if [ -n "$macos_15" ]; then
+    fqos=$macos_15
+    munki_catalog=$munki_catalog_15
+    munki_mini=6.6.1
+    os_major="15"
+    os_maxi="14.99"
+    os_mini="10.13"
+    os_munki="sequoia"
+    os_nice="Sequoia"
+    repo_stuff
+fi
 if [ -n "$macos_14" ]; then
     fqos=$macos_14
     munki_catalog=$munki_catalog_14
@@ -626,24 +637,13 @@ if [ -n "$macos_13" ]; then
     os_nice="Ventura"
     repo_stuff
 fi
-if [ -n "$macos_12" ]; then
-    fqos=$macos_12
-    munki_catalog=$munki_catalog_12
-    munki_mini=6.0.1
-    os_major="12"
-    os_maxi="11.99"
-    os_mini="10.9"
-    os_munki="monterey"
-    os_nice="Monterey"
-    repo_stuff
-fi
 
 ################################################################################
 # Postinstall, makecatalogs                                                    #
 ################################################################################
 
 # Check if any new package(s) were created
-if [[ ( -n "$macos_12" || -n "$macos_13" || -n "$macos_14" ) ]]; then
+if [[ ( -n "$macos_13" || -n "$macos_14" || -n "$macos_15" ) ]]; then
     if [[ -f "$Base_Path/usr/postinstall.sh" ]]; then
         "$Base_Path/usr/postinstall.sh"
     fi
