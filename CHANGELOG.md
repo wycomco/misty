@@ -7,6 +7,12 @@
 - See [Testing methods](./README.md#testing-methods) and [To Do](./README.md#to-do) sections of the README if you plan to use *misty* at the current state.
 
 
+## [0.2.2](https://github.com/wycomco/misty/releases/tag/v0.2.2) – 2024-09-17 (Pre-release)
+
+### Added
+- Add support for macOS Sequoia, remove macOS Monterey routine; update config.txt if present – [PR#15](https://github.com/wycomco/misty/pull/15)
+
+
 ## [0.2.1](https://github.com/wycomco/misty/releases/tag/v0.2.1) – 2024-09-04 (Pre-release)
 
 ### Security
