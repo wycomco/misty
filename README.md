@@ -6,6 +6,8 @@ This script checks for the availability of new macOS releases currently supporte
 
 Since this is a pre-release with frequent updates, the installer has not yet been signed or notarized. To run the downloaded installer, please right-click the `.pkg` file and select 'Open'.
 
+Sequoia note: If you are running the installer on macOS 15, you need to right-click the installer and choose "Open". macOS will not allow you to run the installer immediately, so you need to click on "Done". After that, allow the execution of the installer in System Settings => Privacy & Security. Scroll down to the "Security" section, where you will find the message *"misty" was blocked to protect your Mac.* Tick "Open Anyway". This will bring up a pop-up window where you need to confirm that you want to "Open Anyway" the *misty* installer. Finally, grant the installer permission to control "System Events.app".
+
 See the [Changelog](./CHANGELOG.md) for details on version history and updates.
 
 ## Goals of this Script
@@ -78,7 +80,7 @@ The resulting payloads expect png files in the `icon` subfolder of the munki rep
 
 ## System Requirements
 
-This script was tested with macOS 14 Sonoma. It should also work with prior macOS versions, but this has not been tested.
+This script was tested on macOS 15 Sequoia and macOS 14 Sonoma. It should also work with earlier versions of macOS, but this has not been tested.
 
 You should have at least 60 GB of free disk space available during the first run in order to package all three major versions.
 
