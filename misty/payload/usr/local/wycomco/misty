@@ -111,7 +111,7 @@ check_repo() {
 
 check_space() {
     local boot_disk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
-    local boot_space=$(df -k "$boot_disk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
+    local boot_space=$(df -k "$Base_Path" | awk 'NR==2{print int($4 / 1024 / 1024)}')
     local repo_disk=$(df -P "$RepoPath" | awk 'NR==2{print $1}')
     local repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
 
@@ -428,8 +428,8 @@ if [[ ! -t 1 ]]; then
     exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
 fi
 
-repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
-diskspace_required=30 # Size required on boot disk for installer and cache in GB
+repo_required=30 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
+diskspace_required=32 # Size required on boot disk for installer and cache in GB
 Base_Path="/var/root/misty"
 Mist_Path="/Users/Shared/Mist"
 LogPath="$Base_Path/Logs"

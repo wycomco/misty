@@ -128,7 +128,6 @@ This is a pre-release. It is working, but we have some tasks on our to-do list:
 
 - Testing in different environments, preferably with SMB and Samba shares.
 - Ensure all items that require FDA are mentioned.
-- Calculate space requirements based on actual number of available macOS versions
 - Function `rm_previous_files` states one previous version when no version is available
 - Improve message output.
 - Harmonize variable names.
