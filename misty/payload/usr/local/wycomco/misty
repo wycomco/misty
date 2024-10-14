@@ -93,6 +93,7 @@ check_repo() {
                 ((elapsed+=interval))
                 if [ $elapsed -ge $timeout ]; then
                     log_message "stderr" "Repositories' share cannot be mounted within 30 seconds. Exiting ..."
+                    launchd_echo >&2
                     exit 1
                 fi
             done
@@ -101,6 +102,7 @@ check_repo() {
     # 'Elif' loop applicable for locally attached volumes (USB, Thunderbolt)
     elif [[ ! -d "$RepoPath" ]]; then
         log_message "stderr" "Error: Repository \"$RepoPath\" not accessible, please check."
+        launchd_echo >&2
         exit 1
     fi
 }
@@ -115,17 +117,20 @@ check_space() {
         local total_required_space=$((repo_required + diskspace_required))
         if (( boot_space < total_required_space )); then
             log_message "stderr" "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
+            launchd_echo >&2
             exit 1
         fi
     fi
 
     if (( repo_space < repo_required )); then
         log_message "stderr" "Less than $repo_required GB space on repo left. Please provide more space."
+        launchd_echo >&2
         exit 1
     fi
 
     if (( boot_space < diskspace_required )); then
         log_message "stderr" "Less than $diskspace_required GB space on boot volume left. Please provide more space."
+        launchd_echo >&2
         exit 1
     fi
 }
@@ -216,6 +221,12 @@ get_timestamp() {
     local current_time=$(date +%s)
     local milliseconds=$(perl -MTime::HiRes -e 'printf "%.3f\n", Time::HiRes::time' | cut -d. -f2)
     echo $(date -r "$current_time" +"%Y-%m-%d %H:%M:%S").$milliseconds
+}
+
+launchd_echo() {
+    if [[ ! -t 1 ]]; then
+        echo
+    fi
 }
 
 # Unified logging function
@@ -439,11 +450,13 @@ fi
 mist_check=$(which mist)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: mist not found. Please install mist-cli or put it into the PATH."
+    launchd_echo >&2
     exit 1
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: munkiimport not found. Please check your munki installation."
+    launchd_echo >&2
     exit 1
 fi
 if [[ ! -d "$LogPath" ]]; then
@@ -452,6 +465,7 @@ if [[ ! -d "$LogPath" ]]; then
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
     log_message "stderr" "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
+    launchd_echo >&2
     exit 1
 fi
 
@@ -653,8 +667,5 @@ fi
 check_daemon
 log_message "stdout" "Finished misty run."
 # Enter an empty line if run as launchd to StandardOutPath
-if [[ ! -t 1 ]]; then
-    echo
-fi
-
+launchd_echo
 exit 0
