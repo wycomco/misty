@@ -10,26 +10,26 @@
 	<string>/</string>
 	<key>name</key>
 	<string>misty-${version}.pkg</string>
-    <key>notarization_info</key>
-    <dict>
-        <key>asc_provider</key>
-        <string>wycomcoGmbH</string>
-        <key>keychain_profile</key>
-        <string>WYC_AC_PASSWORD</string>
-        <key>stapler_timeout</key>
-        <string>600</string>
-    </dict>
+	<key>notarization_info</key>
+	<dict>
+		<key>asc_provider</key>
+		<string>wycomcoGmbH</string>
+		<key>keychain_profile</key>
+		<string>WYC_AC_PASSWORD</string>
+		<key>stapler_timeout</key>
+		<string>600</string>
+	</dict>
 	<key>ownership</key>
 	<string>recommended</string>
 	<key>postinstall_action</key>
 	<string>none</string>
 	<key>preserve_xattr</key>
 	<false/>
-    <key>signing_info</key>
-    <dict>
-        <key>identity</key>
-        <string>Developer ID Installer: wycomco GmbH (CD4727XSC2)</string>
-    </dict>
+	<key>signing_info</key>
+	<dict>
+		<key>identity</key>
+		<string>Developer ID Installer: wycomco GmbH (CD4727XSC2)</string>
+	</dict>
 	<key>suppress_bundle_relocation</key>
 	<true/>
 	<key>version</key>
