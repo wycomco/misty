@@ -84,8 +84,7 @@ check_repo() {
         if ! mount | grep -q "/Volumes/${RepoShare}"; then
             if ! ping -q -c2 "${RepoName}" > /dev/null 2>&1; then
                 log_message "stderr" "Error: Remote repository \"$RepoName\" not accessible, please check."
-                launchd_echo >&2
-                exit 1
+                exit_error
             fi
             local interval=1
             local timeout=30
@@ -98,8 +97,7 @@ check_repo() {
                 ((elapsed+=interval))
                 if [ $elapsed -ge $timeout ]; then
                     log_message "stderr" "Repositories' share cannot be mounted within 30 seconds. Exiting ..."
-                    launchd_echo >&2
-                    exit 1
+                    exit_error
                 fi
             done
             log_message "stdout" "Share ${RepoShare} was mounted."
@@ -107,8 +105,7 @@ check_repo() {
     # 'Elif' loop applicable for locally attached volumes (USB, Thunderbolt)
     elif [[ ! -d "$RepoPath" ]]; then
         log_message "stderr" "Error: Repository \"$RepoPath\" not accessible, please check."
-        launchd_echo >&2
-        exit 1
+        exit_error
     fi
 }
 
@@ -122,21 +119,18 @@ check_space() {
         local total_required_space=$((repo_required + diskspace_required))
         if (( boot_space < total_required_space )); then
             log_message "stderr" "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
-            launchd_echo >&2
-            exit 1
+            exit_error
         fi
     fi
 
     if (( repo_space < repo_required )); then
         log_message "stderr" "Less than $repo_required GB space on repo left. Please provide more space."
-        launchd_echo >&2
-        exit 1
+        exit_error
     fi
 
     if (( boot_space < diskspace_required )); then
         log_message "stderr" "Less than $diskspace_required GB space on boot volume left. Please provide more space."
-        launchd_echo >&2
-        exit 1
+        exit_error
     fi
 }
 
@@ -195,6 +189,13 @@ download_macos() {
             fi
         done
     fi
+}
+
+exit_error() {
+    log_message "stdout" "misty run finished with errors, see \"/var/log/misty.log\" for error messages."
+    launchd_echo
+    exit 1
+
 }
 
 extract_macos_version() {
@@ -455,14 +456,12 @@ fi
 mist_check=$(which mist)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: mist not found. Please install mist-cli or put it into the PATH."
-    launchd_echo >&2
-    exit 1
+    exit_error
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: munkiimport not found. Please check your munki installation."
-    launchd_echo >&2
-    exit 1
+    exit_error
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
@@ -470,8 +469,7 @@ if [[ ! -d "$LogPath" ]]; then
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
     log_message "stderr" "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
-    launchd_echo >&2
-    exit 1
+    exit_error
 fi
 
 ################################################################################
