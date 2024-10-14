@@ -84,6 +84,7 @@ check_repo() {
         if ! mount | grep -q "/Volumes/${RepoShare}"; then
             if ! ping -q -c2 "${RepoName}" > /dev/null 2>&1; then
                 log_message "stderr" "Error: Remote repository \"$RepoName\" not accessible, please check."
+                launchd_echo >&2
                 exit 1
             fi
             local interval=1
