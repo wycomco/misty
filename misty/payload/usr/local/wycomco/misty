@@ -91,7 +91,9 @@ check_repo() {
             local elapsed=0
             # Create the mount point if it doesn't exist
             mkdir -p "/Volumes/${RepoShare}"
-            mount_smbfs "//${RepoUser}:${RepoPass}@${RepoName}/${RepoShare}" "/Volumes/${RepoShare}"
+            # URL-encode the password for special characters like "@"
+            EncodedPass=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${RepoPass}'))")
+            mount_smbfs "//${RepoUser}:${EncodedPass}@${RepoName}/${RepoShare}" "/Volumes/${RepoShare}"
             while ! ls "${RepoPath}" &>/dev/null; do
                 sleep $interval
                 ((elapsed+=interval))
