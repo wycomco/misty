@@ -31,6 +31,20 @@
 # Functions                                                                    #
 ################################################################################
 
+check_and_chown() {
+    local current_path="$1"
+    if [[ -d "$current_path" ]]; then
+        current_owner=$(ls -ld "$current_path" | awk '{print $3":"$4}')
+        if [[ "$current_owner" != "$Repo_uid_gid" ]]; then
+            log_message "stdout" "Changing ownership of $current_path to $Repo_uid_gid"
+            chown "$Repo_uid_gid" "$current_path"
+        fi
+    else
+        log_message "stderr" "$current_path does not exist, please check your repository's structure."
+        exit_error
+    fi
+}
+
 check_daemon() {
     DaemonHourPlist=$(PlistBuddy -c "print :StartCalendarInterval:Hour" $DaemonPath 2>/dev/null)
     DaemonMinutePlist=$(PlistBuddy -c "print :StartCalendarInterval:Minute" $DaemonPath 2>/dev/null)
@@ -82,18 +96,24 @@ check_repo() {
     if [[ "$Is_SMB" == "yes" || "$Is_SMB" == "y" || "$Is_SMB" == "Y" || "$Is_SMB" == "Yes" || "$Is_SMB" == "YES" ]]; then
         local RepoShare=$(echo "$RepoPath" | awk -F'/' '{print $3}')
         if ! mount | grep -q "/Volumes/${RepoShare}"; then
+            if ! ping -q -c2 "${RepoName}" > /dev/null 2>&1; then
+                log_message "stderr" "Error: Remote repository \"$RepoName\" not accessible, please check."
+                exit_error
+            fi
             local interval=1
             local timeout=30
             local elapsed=0
             # Create the mount point if it doesn't exist
             mkdir -p "/Volumes/${RepoShare}"
-            mount_smbfs "//${RepoUser}:${RepoPass}@${RepoName}/${RepoShare}" "/Volumes/${RepoShare}"
+            # URL-encode the password for special characters like "@"
+            EncodedPass=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${RepoPass}'))")
+            mount_smbfs "//${RepoUser}:${EncodedPass}@${RepoName}/${RepoShare}" "/Volumes/${RepoShare}"
             while ! ls "${RepoPath}" &>/dev/null; do
                 sleep $interval
                 ((elapsed+=interval))
                 if [ $elapsed -ge $timeout ]; then
                     log_message "stderr" "Repositories' share cannot be mounted within 30 seconds. Exiting ..."
-                    exit 1
+                    exit_error
                 fi
             done
             log_message "stdout" "Share ${RepoShare} was mounted."
@@ -101,13 +121,13 @@ check_repo() {
     # 'Elif' loop applicable for locally attached volumes (USB, Thunderbolt)
     elif [[ ! -d "$RepoPath" ]]; then
         log_message "stderr" "Error: Repository \"$RepoPath\" not accessible, please check."
-        exit 1
+        exit_error
     fi
 }
 
 check_space() {
     local boot_disk=$(df -P "$Base_Path" | awk 'NR==2{print $1}')
-    local boot_space=$(df -k "$boot_disk" | awk 'NR==2{print int($4 / 1024 / 1024)}')
+    local boot_space=$(df -k "$Base_Path" | awk 'NR==2{print int($4 / 1024 / 1024)}')
     local repo_disk=$(df -P "$RepoPath" | awk 'NR==2{print $1}')
     local repo_space=$(df -k "$RepoPath" | awk 'NR==2{print int($4 / 1024 / 1024)}')
 
@@ -115,18 +135,18 @@ check_space() {
         local total_required_space=$((repo_required + diskspace_required))
         if (( boot_space < total_required_space )); then
             log_message "stderr" "Less than $total_required_space GB on the boot disk holding both repo and boot volume. Please provide more space."
-            exit 1
+            exit_error
         fi
     fi
 
     if (( repo_space < repo_required )); then
         log_message "stderr" "Less than $repo_required GB space on repo left. Please provide more space."
-        exit 1
+        exit_error
     fi
 
     if (( boot_space < diskspace_required )); then
         log_message "stderr" "Less than $diskspace_required GB space on boot volume left. Please provide more space."
-        exit 1
+        exit_error
     fi
 }
 
@@ -187,6 +207,13 @@ download_macos() {
     fi
 }
 
+exit_error() {
+    log_message "stdout" "misty run finished with errors, see \"/var/log/misty.log\" for error messages."
+    launchd_echo
+    exit 1
+
+}
+
 extract_macos_version() {
     sed -n 's/.*macOS '"$1"'[^0-9]*\([0-9.]*\).*/\1/p' "$2" | tr -d '[:space:]'
 }
@@ -216,6 +243,12 @@ get_timestamp() {
     local current_time=$(date +%s)
     local milliseconds=$(perl -MTime::HiRes -e 'printf "%.3f\n", Time::HiRes::time' | cut -d. -f2)
     echo $(date -r "$current_time" +"%Y-%m-%d %H:%M:%S").$milliseconds
+}
+
+launchd_echo() {
+    if [[ ! -t 1 ]]; then
+        echo
+    fi
 }
 
 # Unified logging function
@@ -424,8 +457,8 @@ if [[ ! -t 1 ]]; then
     exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
 fi
 
-repo_required=28 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
-diskspace_required=30 # Size required on boot disk for installer and cache in GB
+repo_required=30 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
+diskspace_required=32 # Size required on boot disk for installer and cache in GB
 Base_Path="/var/root/misty"
 Mist_Path="/Users/Shared/Mist"
 LogPath="$Base_Path/Logs"
@@ -439,12 +472,12 @@ fi
 mist_check=$(which mist)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: mist not found. Please install mist-cli or put it into the PATH."
-    exit 1
+    exit_error
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: munkiimport not found. Please check your munki installation."
-    exit 1
+    exit_error
 fi
 if [[ ! -d "$LogPath" ]]; then
     mkdir -p "$LogPath"
@@ -452,7 +485,7 @@ if [[ ! -d "$LogPath" ]]; then
 fi
 if [[ ! -d "$Template" || ! $(ls -A "$Template") ]]; then
     log_message "stderr" "Error: The directory \"$Template\" either does not exist or is empty. Please reinstall misty."
-    exit 1
+    exit_error
 fi
 
 ################################################################################
@@ -540,6 +573,7 @@ if [[ ! -t 1 ]]; then
     log_message "stdout" "Start of misty run."
 fi
 
+check_daemon
 check_repo
 
 Repo_uid_gid=$(stat -f "%Su:%Sg" "$RepoPath")
@@ -642,19 +676,26 @@ fi
 # Postinstall, makecatalogs                                                    #
 ################################################################################
 
-# Check if any new package(s) were created
+# Only proceed if any new package(s) were created
 if [[ ( -n "$macos_13" || -n "$macos_14" || -n "$macos_15" ) ]]; then
+    # Ensure correct permissions in full misty path
+    munki_path="${munki_path%/}" # Remove trailing slash if present
+    IFS="/" read -A subdirs <<< "$munki_path" # Split munki_path into its components (subdirectories)
+    current_pkgs_path="$RepoPath/pkgs"
+    current_pkgsinfo_path="$RepoPath/pkgsinfo"
+    for dir in "${subdirs[@]}"; do # Iterate over each subdirectory, checking and applying permissions if needed
+        current_pkgs_path="$current_pkgs_path/$dir"
+        current_pkgsinfo_path="$current_pkgsinfo_path/$dir"
+        check_and_chown "$current_pkgs_path"
+        check_and_chown "$current_pkgsinfo_path"
+    done
     if [[ -f "$Base_Path/usr/postinstall.sh" ]]; then
         "$Base_Path/usr/postinstall.sh"
     fi
     makecatalogs "$RepoPath" | grep 'warning'
 fi
 
-check_daemon
 log_message "stdout" "Finished misty run."
 # Enter an empty line if run as launchd to StandardOutPath
-if [[ ! -t 1 ]]; then
-    echo
-fi
-
+launchd_echo
 exit 0
