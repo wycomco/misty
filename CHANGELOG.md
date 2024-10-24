@@ -1,7 +1,7 @@
 # Changelog
 
 
-## Unreleased
+## [0.2.3](https://github.com/wycomco/misty/releases/tag/v0.2.3) – 2024-10-24 (Public pre-release)
 
 ### Added
 - Check for presence of repo if remote – [PR#17](https://github.com/wycomco/misty/pull/17)
