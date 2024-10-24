@@ -3,8 +3,15 @@
 
 ## Unreleased
 
-### Info
-- See [Testing methods](./README.md#testing-methods) and [To Do](./README.md#to-do) sections of the README if you plan to use *misty* at the current state.
+### Added
+- Check for presence of repo if remote – [PR#17](https://github.com/wycomco/misty/pull/17)
+- Create workflow for signed and notarized installer – [PR#20](https://github.com/wycomco/misty/pull/20)
+- Check owner and group of subdirectories defined in `$munki_path` – [PR#22](https://github.com/wycomco/misty/pull/22)
+
+### Changed
+- Checking order, output of launchd logs on exit 1 – [PR#18](https://github.com/wycomco/misty/pull/18)
+- Increased storage requirement for installers  – [PR#19](https://github.com/wycomco/misty/pull/19)
+- Handling of special characters in password for repo share  – [PR#21](https://github.com/wycomco/misty/pull/21)
 
 
 ## [0.2.2](https://github.com/wycomco/misty/releases/tag/v0.2.2) – 2024-09-17 (Pre-release)
