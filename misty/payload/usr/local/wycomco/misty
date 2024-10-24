@@ -664,11 +664,62 @@ fi
 
 # Check if any new package(s) were created
 if [[ ( -n "$macos_13" || -n "$macos_14" || -n "$macos_15" ) ]]; then
+    # Ensure correct permissions in full misty path
+    munki_path="${munki_path%/}" # Remove trailing slash if present
+    IFS="/" read -A subdirs <<< "$munki_path" # Split munki_path into its components (subdirectories)
+    current_pkgs_path="$RepoPath/pkgs"
+    current_pkgsinfo_path="$RepoPath/pkgsinfo"
+    # Iterate over each subdirectory, checking and applying permissions if needed
+    for dir in "${subdirs[@]}"; do
+        current_pkgs_path="$current_pkgs_path/$dir"
+        current_pkgsinfo_path="$current_pkgsinfo_path/$dir"
+        check_and_chown() {
+            local path="$1"
+            if [[ -d "$path" ]]; then
+                current_owner=$(ls -ld "$path" | awk '{print $3":"$4}')
+                if [[ "$current_owner" != "$Repo_uid_gid" ]]; then
+                    log_message "stdout" "Changing ownership of $path to $Repo_uid_gid"
+                    chown "$Repo_uid_gid" "$path"
+                fi
+            else
+                log_message "stderr" "$path does not exist, please check your config.txt"
+                exit_error
+            fi
+        }
+        check_and_chown "$current_pkgs_path"
+        check_and_chown "$current_pkgsinfo_path"
+    done
     if [[ -f "$Base_Path/usr/postinstall.sh" ]]; then
         "$Base_Path/usr/postinstall.sh"
     fi
     makecatalogs "$RepoPath" | grep 'warning'
 fi
+
+# Testing part, rm if it works
+munki_path="${munki_path%/}" # Remove trailing slash if present
+IFS="/" read -A subdirs <<< "$munki_path" # Split munki_path into its components (subdirectories)
+current_pkgs_path="$RepoPath/pkgs"
+current_pkgsinfo_path="$RepoPath/pkgsinfo"
+# Iterate over each subdirectory, checking and applying permissions if needed
+for dir in "${subdirs[@]}"; do
+    current_pkgs_path="$current_pkgs_path/$dir"
+    current_pkgsinfo_path="$current_pkgsinfo_path/$dir"
+    check_and_chown() {
+        local path="$1"
+        if [[ -d "$path" ]]; then
+            current_owner=$(ls -ld "$path" | awk '{print $3":"$4}')
+            if [[ "$current_owner" != "$Repo_uid_gid" ]]; then
+                log_message "stdout" "Changing ownership of $path to $Repo_uid_gid"
+                #chown "$Repo_uid_gid" "$path"
+            fi
+        else
+            log_message "stderr" "$path does not exist, please check your config.txt"
+            exit_error
+        fi
+    }
+    check_and_chown "$current_pkgs_path"
+    check_and_chown "$current_pkgsinfo_path"
+done
 
 log_message "stdout" "Finished misty run."
 # Enter an empty line if run as launchd to StandardOutPath
