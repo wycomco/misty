@@ -155,6 +155,7 @@ cleanup() {
     chown "$Repo_uid_gid" "$pkgsinfodir/arm64/${munki_name}-$fqos.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" \
     "$pkgsinfodir/$deploy_name-$fqos.plist" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
     rm -rf "$Mist_Path/Install macOS $os_nice.app"
+    rm -rf /private/tmp/com.ninxsoft.mist
     mv "$LogPath"/current_state_"$os_major".txt "$LogPath"/previous_state_"$os_major".txt
     echo "Last update for macOS "$os_nice" ran on $(date)" >> "$LogPath"/changelog.txt
 }
