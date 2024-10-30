@@ -493,6 +493,12 @@ fi
 # First run                                                                    #
 ################################################################################
 
+# Configuration did not happen yet and the script is running unattended
+if [[ ! -d "$Base_Path/usr" && ! -t 1 && ! -t 2 ]]; then
+    log_message "stdout" "Exiting, no configuration done yet"
+    exit 0
+fi
+
 if [[ ! -d "$Base_Path/usr" ]]; then
     mkdir -p "$Base_Path/usr"
     chmod 0700 "$Base_Path"
