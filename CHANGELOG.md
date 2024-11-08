@@ -1,6 +1,13 @@
 # Changelog
 
 
+## Unreleased
+
+### Added
+- Clean up *mist-cli*’s tmp folder 
+- Exit *misty* run if invoked by launchd without config files present
+
+
 ## [0.2.3](https://github.com/wycomco/misty/releases/tag/v0.2.3) – 2024-10-24 (Public pre-release)
 
 ### Added
