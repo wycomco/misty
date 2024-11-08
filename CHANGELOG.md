@@ -7,6 +7,9 @@
 - Clean up *mist-cli*’s tmp folder 
 - Exit *misty* run if invoked by launchd without config files present
 
+### Changed
+- Use *munki*’s recommended `minimum_munki_version`, also for x86_64 plists – [PR#24](https://github.com/wycomco/misty/pull/24)
+
 
 ## [0.2.3](https://github.com/wycomco/misty/releases/tag/v0.2.3) – 2024-10-24 (Public pre-release)
 

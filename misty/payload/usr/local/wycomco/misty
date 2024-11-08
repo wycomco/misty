@@ -313,7 +313,7 @@ munkiimport_startos() {
     munkiimport -n --installer-type startosinstall --name="$munki_name" \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple \
     --displayname="macOS $os_nice" --description="Installs macOS $os_nice $fqos" \
-    --icon="${munki_name}_$os_munki.png" --minimum_munki_version=5.1.0 \
+    --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
     --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
     --arch=x86_64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" \
@@ -659,7 +659,7 @@ fi
 if [ -n "$macos_14" ]; then
     fqos=$macos_14
     munki_catalog=$munki_catalog_14
-    munki_mini=6.3
+    munki_mini=6.3.2
     os_major="14"
     os_maxi="13.99"
     os_mini="10.13"
@@ -670,7 +670,7 @@ fi
 if [ -n "$macos_13" ]; then
     fqos=$macos_13
     munki_catalog=$munki_catalog_13
-    munki_mini=6.0.1
+    munki_mini=6.3
     os_major="13"
     os_maxi="12.99"
     os_mini="10.12"
