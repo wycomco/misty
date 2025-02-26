@@ -7,6 +7,9 @@
 - Clean up *mist-cli*’s tmp folder 
 - Exit *misty* run if invoked by launchd without config files present
 
+### Fixed
+- When exiting 1: do a makecatalogs and display correct file name of error log – [PR#25](https://github.com/wycomco/misty/pull/25)
+
 ### Changed
 - Use *munki*’s recommended `minimum_munki_version`, also for x86_64 plists – [PR#24](https://github.com/wycomco/misty/pull/24)
 
