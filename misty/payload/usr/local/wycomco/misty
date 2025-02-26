@@ -209,7 +209,8 @@ download_macos() {
 }
 
 exit_error() {
-    log_message "stdout" "misty run finished with errors, see \"/var/log/misty.log\" for error messages."
+    log_message "stdout" "misty run finished with errors, see \"/var/log/misty_error.log\" for error messages."
+    makecatalogs "$RepoPath" | grep 'warning'
     launchd_echo
     exit 1
 
