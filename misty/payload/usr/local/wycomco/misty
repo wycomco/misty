@@ -4,7 +4,7 @@
 #                                                                              #
 #   MIT License                                                                #
 #                                                                              #
-#   Copyright (c) 2024 wycomco                                                 #
+#   Copyright (c) 2025 wycomco                                                 #
 #                                                                              #
 #   Permission is hereby granted, free of charge, to any person obtaining a    #
 #   copy of this software and associated documentation files (the "Software"), #
@@ -398,54 +398,61 @@ rm_color_codes() {
 
 rm_previous_files() {
     setopt nullglob
-    if ! ls -1 "$pkgsdir"/"$munki_name"-"$os_major"* >/dev/null 2>&1; then
+    if ! ls -1 "${pkgsdir}/${munki_name}-${os_major}"* >/dev/null 2>&1; then
         log_message "stdout" "No files matching $munki_name version $os_major found. Not removing any files."
         return
     fi
 
+    if  ls -1 "${pkgsdir}/${munki_name}-${fqos}"* >/dev/null 2>&1; then
+        log_message "stdout" "The current version is already present in the repo, it will be overwritten."
+    fi
+
     local fqos_retired=()
-    local initial_versions=0
-    local files_deleted=false
-    
+
     for file in "$pkgsdir"/"$munki_name"-*; do
-        # Extract the version number from the filename
+        # Extract the version number from the file name
         version=$(basename "$file" | sed "s/${munki_name}-\(.*\)\.dmg/\1/")
-        # Remove part before the version number
         major=$(echo "$version" | cut -d. -f1)
-        # Check if major version matches os_major
-        if [[ $major == $os_major ]]; then
-            # Remove .dmg from the filename
-            filename=$(basename "$file" | sed "s/${munki_name}-//" | sed 's/\.dmg$//')
-            # Add the filename to fqos_retired array
-            fqos_retired+=("$filename")
+        # Add full version string to array if major version matches
+        if [[ "$major" == "$os_major" ]]; then
+            fqos_retired+=("$version")
         fi
     done
+
+    # Sort all versions of major release in ascending order
+    IFS=$'\n' sorted_versions=($(sort -V <<<"${fqos_retired[*]}"))
+    unset IFS
+
+    # Remove current version from sorted array if present
+    sorted_versions=(${sorted_versions[@]/$fqos})
     
-    initial_versions=${#fqos_retired[@]} # Count initial versions found
-
-    # Loop through unique major versions
-    for major_version in $(echo "${fqos_retired[@]}" | cut -d. -f1 | sort -u); do
-        # Filter files based on major version
-        major_files=($(echo "${fqos_retired[@]}" | grep "^${major_version}"))
-        # Sort files based on minor and patch version numbers in descending order
-        major_files_sorted=($(printf '%s\n' "${major_files[@]}" | sort -rV))
-        # Keep only the first element (highest minor and patch version)
-        major_files_sorted=("${(@)major_files_sorted:1}")    
-        # Loop through major_files_sorted array and remove corresponding files
-        for file in "${major_files_sorted[@]}"; do
-            rm -f "${pkgsdir}"/*"${file}".dmg
-            rm -f "${pkgsinfodir}"/*"${file}".plist
-            rm -f "${pkgsinfodir}"/arm64/*"${file}".plist
-            rm -f "${pkgsinfodir}"/x86_64/*"${file}".plist
-            log_message "stdout" "Removed macOS version(s) ${file} from pkgs and pkgsinfo directories."
-            files_deleted=true
-        done
-    done
-
-    # Check if only one version was found or if no files were deleted
-    if [ "$initial_versions" -eq 1 ] || [ "$files_deleted" = false ]; then
-        log_message "stdout" "Only one previous version of macOS ${os_nice} present in repository. Not removing any files."
+    # Check if only the current version is present
+    if (( ${#sorted_versions[@]} == 0 )); then
+        log_message "stdout" "No prior version is present, no files removed."
+        return
     fi
+
+    # Remove highest version left
+    highest_previous_version="${sorted_versions[-1]}"
+    sorted_versions=(${sorted_versions[@]/$highest_previous_version})
+
+    # After removing the previous version, verify if only one prior version is present
+    if (( ${#sorted_versions[@]} == 0 )); then
+        log_message "stdout" "Only one prior version is present, no files removed."
+        return
+    fi
+
+    # Delete remaining legacy versions
+    for version_to_remove in "${sorted_versions[@]}"; do
+        # Delete all associated files using glob patterns
+        rm -f "${pkgsdir}/${munki_name}-${version_to_remove}.dmg"
+        rm -f "${pkgsinfodir}"/*"${version_to_remove}".plist
+        rm -f "${pkgsinfodir}/arm64"/*"${version_to_remove}".plist
+        rm -f "${pkgsinfodir}/x86_64"/*"${version_to_remove}".plist
+
+        # Log only the removed version once
+        log_message "stdout" "Version $version_to_remove was removed."
+    done
 }
 
 ################################################################################
