@@ -124,7 +124,7 @@ This is a pre-release. It is working, but we have some tasks on our to-do list:
 
 - Testing in different environments.
 - Ensure all items that require FDA are mentioned.
-- Function `rm_previous_files` states one previous version when no previous version is available.
+- macOS gets re-imported albeit no change in version (and probably build)
 - Improve message and log output.
 - Harmonize variable names.
 - Improve code readability in general.
