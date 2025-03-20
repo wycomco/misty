@@ -3,6 +3,9 @@
 
 ## Unreleased
 
+
+## [0.2.4](https://github.com/wycomco/misty/releases/tag/v0.2.4) – 2025-03-20 (Public pre-release)
+
 ### Added
 - Clean up *mist-cli*’s tmp folder 
 - Exit *misty* run if invoked by launchd without config files present
