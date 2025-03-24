@@ -197,10 +197,10 @@ download_macos() {
     log_message "stdout" "Downloading installer for macOS $fqos"
     if [[ -t 1 ]]; then
         # Reduce output, but output progress of single steps for interactive run
-        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force | tee >(grep 'There is a mist update available') | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
+        mist download installer --compatible "macOS $os_nice" application --application-name "Install macOS $os_nice.app" --force | tee >(grep 'There is a mist update available') | grep '\[ [1-9][0-9]* \/ [1-9][0-9]* \]'
     else
         # If invoked by launchd, only print error messages to StandardErrorPath and update informations on mist-cli to StandardOutPath
-        mist download installer $os_major application --application-name "Install macOS $os_nice.app" --force 2>> /var/log/misty_error.log | while read -r line; do
+        mist download installer --compatible "macOS $os_nice" application --application-name "Install macOS $os_nice.app" --force 2>> /var/log/misty_error.log | while read -r line; do
             if echo "$line" | grep -q 'There is a mist update available'; then
                 echo "$line" >> /var/log/misty.log
             fi
@@ -610,9 +610,9 @@ fi
 ################################################################################
 
 # We want to check each major version seperately
-mist list installer 15 --latest | grep GB > "$LogPath/tmp_state_15.txt"
-mist list installer 14 --latest | grep GB > "$LogPath/tmp_state_14.txt"
-mist list installer 13 --latest | grep GB > "$LogPath/tmp_state_13.txt"
+mist list installer --compatible --latest "macOS Sequoia" | grep GB > "$LogPath/tmp_state_15.txt"
+mist list installer --compatible --latest "macOS Sonoma" | grep GB > "$LogPath/tmp_state_14.txt"
+mist list installer --compatible --latest "macOS Ventura" | grep GB > "$LogPath/tmp_state_13.txt"
 
 # Remove color codes resulting from grep and clean up
 rm_color_codes "$LogPath/tmp_state_15.txt" > "$LogPath/current_state_15.txt"

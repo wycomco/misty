@@ -3,6 +3,9 @@
 
 ## Unreleased
 
+### Fixed
+- List and download only compatible installers – [PR#27](https://github.com/wycomco/misty/pull/27)
+
 
 ## [0.2.4](https://github.com/wycomco/misty/releases/tag/v0.2.4) – 2025-03-20 (Public pre-release)
 
