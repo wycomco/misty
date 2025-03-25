@@ -8,14 +8,16 @@ See the [Changelog](./CHANGELOG.md) for details on version history and updates.
 
 ## Goals of this Script
 
-If a new update for any major version is found, it will be imported into the munki repo, creating the following installers:
+If a new update for any major version supported by Apple is found, it will be imported into the munki repo, creating the following installers:
 - Apple Silicon: *stage_os_installer* and preloader for the installer
 - Intel: *startosinstall* with precache key set to true
 - Both architectures: Place installer in the `/Applications` directory for a later deployment
 
 The item’s *name* keys will not include a major version. Scoping is done using *board_id* and *device_id* in the plists as *installable_condition*. By using this logic, only the latest available macOS upgrade will be offered to the individual client.
 
-If present, one prior version will be kept in the *munki* repo (last known good). Older versions will be deleted before importing the new major version into the repo. We will update the script to support each new macOS once it is available to public. Older versions not being supported by Apple anymore (e.g., macOS 12 Monterey) will then not get deleted automatically. You will have to manually remove older items if not needed anymore in your repo.
+The installers being built are compatible with the device you are running *misty* on. This usually also includes Intel machines. You can verify that by inspecting the resulting plist files. If `board_id`s are included in the `installable_condition` string, the installer is compatible with Intel processors, `device_id`s regard to Apple Silicon processors. Usually, you should see both of them.
+
+If present, one prior version will be kept in the *munki* repo (last known good). Older versions will be deleted before importing the new major version into the repo. We will update the script to support each new macOS once it is available to public. Older versions not being supported by Apple anymore (current plus two previous versions) will then not get deleted automatically. You will have to manually remove older items if not needed anymore in your repo.
 
 Although supported by *mist-cli*, we do not offer beta releases. This workflow aims at production environments serving a larger number of clients with different hardware models needing to upgrade to different major versions.
 
@@ -100,7 +102,7 @@ If you are still facing issues, also grant `Terminal.app` (located in `/Applicat
 
 ## Contributing
 
-This is still a pre-release, mainly because of the limited set of munki repos that have been tested. Being said that, you are highly encouraged to test it in your environment and provide feedback using issues or pull requests. *misty* has produced installers that worked out of the box since the updates released on July 29, 2024 for us.
+*misty* is tested on a limited set of munki repos and use cases. In these environments, it is working as expected. Being said that, you are highly encouraged to use and test it in your environment and provide feedback using issues or pull requests.
 
 *misty* makes use of [git-flow](https://github.com/nvie/gitflow). Branch name for production releases is *main*, branch name for "next release" development is *dev*. The version tag prefix is *v*. All other values are the default ones. You can install git-flow using [homebrew](https://brew.sh/) by entering `brew install git-flow` in the terminal.
 
@@ -119,8 +121,6 @@ This is still a pre-release, mainly because of the limited set of munki repos th
 - The reload of the launchdaemon does not work if *misty* was invoked by its launchdaemon. Please run *misty* in Terminal using `sudo misty` if you have changed the start time in the config file. This will trigger a proper reload of the daemon (and do nothing else unless a new macOS version is found).
 
 ## To Do
-
-This is a pre-release. It is working, but we have some tasks on our to-do list:
 
 - Testing in different environments.
 - Ensure all items that require FDA are mentioned.
