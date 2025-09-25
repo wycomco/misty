@@ -482,6 +482,15 @@ mist_check=$(which mist)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: mist not found. Please install mist-cli or put it into the PATH."
     exit_error
+else
+    mist_version_line=$(mist --version | head -n 1)
+    installed_version=$(echo "$mist_version_line" | awk '{print $1}')
+    latest_version=$(echo "$mist_version_line" | awk -F'latest: ' '{print $2}' | awk -F')' '{print $1}')
+
+    if [ "$installed_version" != "$latest_version" ]; then
+        log_message "stderr" "Error: mist version $installed_version is outdated. Latest is $latest_version. Please update \"mist-cli\"."
+        exit_error
+    fi
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then

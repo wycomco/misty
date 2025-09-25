@@ -3,6 +3,9 @@
 
 ## Unreleased
 
+### Added
+- Check for `mist-cli` version. Exit `misty` if not up to date.
+
 
 ## [0.2.5](https://github.com/wycomco/misty/releases/tag/v0.2.5) – 2025-03-24
 
