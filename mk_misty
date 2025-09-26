@@ -5,6 +5,11 @@
 REPO_URL="https://github.com/wycomco/misty.git"
 TMP_DIR="/var/tmp/misty_pkgbuild"
 ORIGINAL_DIR=$(pwd)
+MUNKIPKG_OPTIONS=""
+
+if [[ "$1" == "--skip-signing" ]]; then
+  MUNKIPKG_OPTIONS="--skip-signing"
+fi
 
 if [ -d "$TMP_DIR" ]; then
   echo "Found previously cloned repo in $TMP_DIR, deleting ..."
@@ -22,12 +27,12 @@ cd "$TMP_DIR" || { echo "Failed to cd into $TMP_DIR"; exit 1; }
 VERSION=$(git describe --tags --abbrev=0)
 echo "Current version of misty is $VERSION"
 echo "Replacing version in build-info.plist..."
-sed -E -i '' "s/[0-9]+.[0-9]+.[0-9]+/${VERSION}/g" misty/build-info.plist
+sed -E -i '' "s/[0-9]+.[0-9]+.[0-9]+/${VERSION}b/g" misty/build-info.plist
 
-munkipkg misty
+munkipkg "$MUNKIPKG_OPTIONS" misty
 munkipkg_success="$?"
 echo "Resetting version in build-info.plist..."
-sed -E -i '' "s/${VERSION}/0.0.0/g" misty/build-info.plist
+sed -E -i '' "s/${VERSION}b/0.0.0/g" misty/build-info.plist
 
 if [ "$munkipkg_success" -ne 0 ]; then
   echo "munkipkg failed."
@@ -39,4 +44,3 @@ open misty/build
 cd "$ORIGINAL_DIR"
 
 exit 0
-
