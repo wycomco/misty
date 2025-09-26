@@ -16,7 +16,7 @@ if [[ -f "$config_file" ]]; then
 munki_catalog_26="testing"
 ' "$config_file"
     echo "Added 'munki_catalog_26=\"testing\"' line after 'munki_catalog_15' in $config_file by installer." >> "$log_file"
-    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added munki_catalog_26=\"testing\" line after munki_catalog_15 in $config_file by installer."'
+    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added »munki_catalog_26=\"testing\"« line after »munki_catalog_15« in $config_file by installer." with title "misty Installer" buttons {"Got it"} default button "Got it"'
   fi
 fi
 
