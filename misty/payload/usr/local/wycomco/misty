@@ -668,7 +668,7 @@ if [ -n "$macos_26" ]; then
     munki_mini=6.7
     os_major="26"
     os_maxi="15.99"
-    os_mini="10.14"
+    os_mini="10.15"
     os_munki="tahoe"
     os_nice="Tahoe"
     repo_stuff
