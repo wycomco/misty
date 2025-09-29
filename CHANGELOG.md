@@ -5,7 +5,6 @@
 
 ### Added
 - Check for `mist-cli` version. Exit `misty` if not up to date.
-- Option for `--skip-signing` in `mk_misty` for testing without notarizing and signing the pkg. Appends a `b` to the version string for distinction from signed and notarized builds – [PR#31](https://github.com/wycomco/misty/pull/31)
 
 
 ## [0.2.5](https://github.com/wycomco/misty/releases/tag/v0.2.5) – 2025-03-24
