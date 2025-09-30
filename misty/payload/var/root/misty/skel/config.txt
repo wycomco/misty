@@ -12,9 +12,9 @@ munki_name="macos"
 # munki name used for provisioning scenarios
 deploy_name="deploy_macos"
 # Please specify the munki catalog(s) for the respective versions
-munki_catalog_13="testing"
 munki_catalog_14="testing"
 munki_catalog_15="testing"
+munki_catalog_26="testing"
 # Please specify the munki category
 munki_category="Utilities"
 # If turned to "yes", localizations will be used. If not present yet, copy the files starting with "localized_" from the skel/ dir into the usr/ folder and adjust to your needs

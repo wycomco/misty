@@ -4,7 +4,11 @@
 ## Unreleased
 
 ### Added
-- Check for `mist-cli` version. Exit `misty` if not up to date.
+- Support for macOS Tahoe – [PR#30](https://github.com/wycomco/misty/pull/30)
+- Check for *mist-cli* version. Exit *misty* if not up to date. – [PR#29](https://github.com/wycomco/misty/pull/29)
+
+### Removed
+- Support for macOS Ventura – [PR#30](https://github.com/wycomco/misty/pull/30)
 
 
 ## [0.2.5](https://github.com/wycomco/misty/releases/tag/v0.2.5) – 2025-03-24
