@@ -119,6 +119,7 @@ If you are still facing issues, also grant `Terminal.app` (located in `/Applicat
 ## Known Issues
 
 - The reload of the launchdaemon does not work if *misty* was invoked by its launchdaemon. Please run *misty* in Terminal using `sudo misty` if you have changed the start time in the config file. This will trigger a proper reload of the daemon (and do nothing else unless a new macOS version is found).
+- Working on file servers (via SMB) on macOS Tahoe seems to need more FDA for single commands like `/usr/bin/sed`. Local repos seem to work fine with the FDA's mentioned in [Prerequisites](#prerequisites) above.
 
 ## To Do
 
