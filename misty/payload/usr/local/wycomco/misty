@@ -482,6 +482,15 @@ mist_check=$(which mist)
 if [ $? -ne 0 ]; then
     log_message "stderr" "Error: mist not found. Please install mist-cli or put it into the PATH."
     exit_error
+else
+    mist_version_line=$(mist --version | head -n 1)
+    installed_version=$(echo "$mist_version_line" | awk '{print $1}')
+    latest_version=$(echo "$mist_version_line" | awk -F'latest: ' '{print $2}' | awk -F')' '{print $1}')
+
+    if [ "$installed_version" != "$latest_version" ]; then
+        log_message "stderr" "Error: mist version $installed_version is outdated. Latest is $latest_version. Please update \"mist-cli\"."
+        exit_error
+    fi
 fi
 munkiimport_check=$(which munkiimport)
 if [ $? -ne 0 ]; then
@@ -567,9 +576,9 @@ echo "RepoName: $RepoName" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
 echo "munki_name: $munki_name" > /dev/null
 echo "deploy_name: $deploy_name" > /dev/null
-echo "munki_catalog_13: $munki_catalog_13" > /dev/null
 echo "munki_catalog_14: $munki_catalog_14" > /dev/null
 echo "munki_catalog_15: $munki_catalog_15" > /dev/null
+echo "munki_catalog_26: $munki_catalog_26" > /dev/null
 echo "munki_category: $munki_category" > /dev/null
 echo "time_input: $time_input" > /dev/null
 echo "localization: $localization" > /dev/null
@@ -610,17 +619,25 @@ fi
 ################################################################################
 
 # We want to check each major version seperately
+mist list installer --compatible --latest "macOS Tahoe" | grep GB > "$LogPath/tmp_state_26.txt"
 mist list installer --compatible --latest "macOS Sequoia" | grep GB > "$LogPath/tmp_state_15.txt"
 mist list installer --compatible --latest "macOS Sonoma" | grep GB > "$LogPath/tmp_state_14.txt"
-mist list installer --compatible --latest "macOS Ventura" | grep GB > "$LogPath/tmp_state_13.txt"
 
 # Remove color codes resulting from grep and clean up
+rm_color_codes "$LogPath/tmp_state_26.txt" > "$LogPath/current_state_26.txt"
 rm_color_codes "$LogPath/tmp_state_15.txt" > "$LogPath/current_state_15.txt"
 rm_color_codes "$LogPath/tmp_state_14.txt" > "$LogPath/current_state_14.txt"
-rm_color_codes "$LogPath/tmp_state_13.txt" > "$LogPath/current_state_13.txt"
 /bin/rm -f "$LogPath/tmp_state_*.txt"
 
 # Compare the content with the previous state if present, ignoring last two columns (date and compatibliity)
+if [ -f "$LogPath/previous_state_26.txt" ]; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_26.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_26.txt"); then
+        macos_26=$(extract_macos_version Tahoe "$LogPath/current_state_26.txt")
+    fi
+else
+    macos_26=$(extract_macos_version Tahoe "$LogPath/current_state_26.txt")
+fi
+
 if [ -f "$LogPath/previous_state_15.txt" ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_15.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_15.txt"); then
         macos_15=$(extract_macos_version Sequoia "$LogPath/current_state_15.txt")
@@ -637,14 +654,6 @@ else
     macos_14=$(extract_macos_version Sonoma "$LogPath/current_state_14.txt")
 fi
 
-if [ -f "$LogPath/previous_state_13.txt" ]; then
-    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_13.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_13.txt"); then
-        macos_13=$(extract_macos_version Ventura "$LogPath/current_state_13.txt")
-    fi
-else
-    macos_13=$(extract_macos_version Ventura "$LogPath/current_state_13.txt")
-fi
-
 # Clean up tmp files
 rm -rf "$LogPath/tmp_state_*.txt"
 
@@ -653,6 +662,17 @@ rm -rf "$LogPath/tmp_state_*.txt"
 ################################################################################
 
 # Execute loops only if version has changed
+if [ -n "$macos_26" ]; then
+    fqos=$macos_26
+    munki_catalog=$munki_catalog_26
+    munki_mini=6.7
+    os_major="26"
+    os_maxi="15.99"
+    os_mini="10.15"
+    os_munki="tahoe"
+    os_nice="Tahoe"
+    repo_stuff
+fi
 if [ -n "$macos_15" ]; then
     fqos=$macos_15
     munki_catalog=$munki_catalog_15
@@ -675,24 +695,13 @@ if [ -n "$macos_14" ]; then
     os_nice="Sonoma"
     repo_stuff
 fi
-if [ -n "$macos_13" ]; then
-    fqos=$macos_13
-    munki_catalog=$munki_catalog_13
-    munki_mini=6.3
-    os_major="13"
-    os_maxi="12.99"
-    os_mini="10.12"
-    os_munki="ventura"
-    os_nice="Ventura"
-    repo_stuff
-fi
 
 ################################################################################
 # Postinstall, makecatalogs                                                    #
 ################################################################################
 
 # Only proceed if any new package(s) were created
-if [[ ( -n "$macos_13" || -n "$macos_14" || -n "$macos_15" ) ]]; then
+if [[ ( -n "$macos_14" || -n "$macos_15" || -n "$macos_26" ) ]]; then
     # Ensure correct permissions in full misty path
     munki_path="${munki_path%/}" # Remove trailing slash if present
     IFS="/" read -A subdirs <<< "$munki_path" # Split munki_path into its components (subdirectories)
