@@ -3,6 +3,7 @@
 config_file="/var/root/misty/usr/config.txt"
 currentUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 log_file="/var/log/misty.log"
+Template="/var/root/misty/skel"
 
 # Check if config file already exists
 if [[ -f "$config_file" ]]; then
@@ -22,6 +23,15 @@ fi
 
 if [ ! -L "/usr/local/bin/misty" ]; then
     ln -s "/usr/local/wycomco/misty" "/usr/local/bin/misty"
+fi
+
+# Remove legacy skel files if present; rename legacy localized files
+/bin/rm "$Template/pre_inserts_arm64"
+/bin/rm "$Template/pre_inserts_x86_64"
+if [[ -f "$Template/localized_arm.txt" ]]; then
+  /bin/mv "$Template/localized_arm.txt" "$Template/localized_arm_legacy.txt"
+  /bin/mv "$Template/localized_stage_os.txt" "$Template/localized_stage_os_legacy.txt"
+  /bin/mv "$Template/localized_startos.txt" "$Template/localized_startos_legacy.txt"
 fi
 
 exit 0
