@@ -307,11 +307,11 @@ munkiimport_stage_os() {
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$munki_name-$fqos.plist")
         head -n "$localized" "$pkgsinfodir/$munki_name-$fqos.plist" > "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
-        cat "$Base_Path"/usr/localized_macos.txt >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+        cat "$Base_Path/usr/localized_macos.txt" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
         awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/$munki_name-$fqos.plist" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
         sed "s/%version%/$fqos/g" "$pkgsinfodir/$munki_name-$fqos.plist.tmp" > "$pkgsinfodir/$munki_name-$fqos.plist"
     fi
-    pre_inserts=$(awk '/<key>supported_architectures<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$munki_name-$fqos.plist")
+    pre_inserts=$(awk '/<key>unattended_install<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$munki_name-$fqos.plist")
     head -n "$pre_inserts" "$pkgsinfodir/$munki_name-$fqos.plist" > "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
     cat "$Template/preupgrade_alert" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
     awk -v pre_inserts="${pre_inserts}" 'NR > pre_inserts' "$pkgsinfodir/$munki_name-$fqos.plist" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
@@ -319,7 +319,7 @@ munkiimport_stage_os() {
 }
 
 preloader() {
-    log_message "stdout" "Creating preloader for ARM version of macOS $fqos"
+    log_message "stdout" "Creating preloader for macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg \
     --name="$munki_name"_pre \
     -c "$munki_catalog" \
