@@ -9,7 +9,7 @@ If you update from a previous version and have used localizations, make sure to 
 - `localized_arm.txt` has been changed to `localized_preloader.txt` to cover both architecture behaviors
 - `localized_stage_os.txt` and `localized_startos.txt` have been combined into `localized_macos.txt` to cover both architecture behaviors
 
-The former files will not be deleted, but feature the suffix `_legacy` in their names after the update.
+The former files will not be deleted, but feature the suffix `_legacy` in their names after the update. Please remove them on your own.
 
 ### Added
 - Support for Munki 7
