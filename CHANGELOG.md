@@ -3,6 +3,9 @@
 
 ## Unreleased
 
+
+## [0.2.7](https://github.com/wycomco/misty/releases/tag/v0.2.7) – 2026-02-10
+
 This release adds support for Munki 7 by removing the unneeded `startosinstall` plist. This was not needed anyway, since `stage_os_installer` serves both architectures.
 
 If you update from a previous version and have used localizations, make sure to update the new files:
@@ -13,6 +16,7 @@ The former files will not be deleted, but feature the suffix `_legacy` in their 
 
 ### Added
 - Support for Munki 7
+- preinstall script to inform user of changes when doing an update
 
 ### Removed
 - Function `munkiimport_startos` (`startosinstall` was removed in Munki 7)
@@ -23,6 +27,7 @@ The former files will not be deleted, but feature the suffix `_legacy` in their 
 - All plists are created in `$pkgsinfodir` base dir instead of `arm64` and `x86_64` subdirs
 - The formerly only to Apple Silicon scoped preloader has been renamed to reflect the changes. It now features the suffix `_pre` instead of `_arm`. **Please update your manifest(s) accordingly!**
 - Renaming/removal of files in skeleton directory
+- Improved GUI output in postinstall script
 
 
 ## [0.2.6](https://github.com/wycomco/misty/releases/tag/v0.2.6) – 2025-09-30
