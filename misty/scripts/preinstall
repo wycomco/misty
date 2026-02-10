@@ -1,0 +1,28 @@
+#!/bin/zsh
+
+config_file="/var/root/misty/usr/config.txt"
+log_file="/var/log/misty.log"
+Base_Path="/var/root/misty"
+Template="$Base_Path/skel"
+
+# Determine current console user and UID
+currentUser=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk '/Name :/ { print $3 }')
+currentUID=""
+if [[ -n "$currentUser" && "$currentUser" != "loginwindow" ]]; then
+  currentUID=$(/usr/bin/id -u "$currentUser" 2>/dev/null)
+fi
+
+msg="Preloader name and scope changed starting in version 0.2.7. Please see the 0.2.7 section of the misty project's CHANGELOG for the manual steps required when updating to 0.2.7 or later."
+
+# Show notice only when updating AND legacy preloader file indicates version < 0.2.7
+if [[ -f "$config_file" && -f "$Template/pre_inserts_x86_64" ]]; then
+  if [[ -n "$currentUID" ]]; then
+    /bin/launchctl asuser "$currentUID" /usr/bin/osascript <<EOF
+tell application "System Events" to display dialog "$msg" with title "misty Installer" buttons {"Got it"} default button 1
+EOF
+  else
+    printf '%s %s\n\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S')" "Preinstall notice: $msg" >> "$log_file"
+  fi
+fi
+
+exit 0

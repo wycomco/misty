@@ -4,7 +4,7 @@
 #                                                                              #
 #   MIT License                                                                #
 #                                                                              #
-#   Copyright (c) 2025 wycomco                                                 #
+#   Copyright (c) 2026 wycomco                                                 #
 #                                                                              #
 #   Permission is hereby granted, free of charge, to any person obtaining a    #
 #   copy of this software and associated documentation files (the "Software"), #
@@ -152,8 +152,8 @@ check_space() {
 
 cleanup() {
     chown "$Repo_uid_gid" "$pkgsdir/$munki_name-$fqos.dmg"
-    chown "$Repo_uid_gid" "$pkgsinfodir/arm64/${munki_name}-$fqos.plist" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" \
-    "$pkgsinfodir/$deploy_name-$fqos.plist" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
+    chown "$Repo_uid_gid" "$pkgsinfodir/${munki_name}-$fqos.plist" "$pkgsinfodir/${munki_name}_pre-$fqos.plist" \
+    "$pkgsinfodir/$deploy_name-$fqos.plist"
     rm -rf "$Mist_Path/Install macOS $os_nice.app"
     rm -rf /private/tmp/com.ninxsoft.mist
     mv "$LogPath"/current_state_"$os_major".txt "$LogPath"/previous_state_"$os_major".txt
@@ -181,7 +181,7 @@ deploy_macos() {
         awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/$deploy_name-$fqos.plist" >> "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
         sed "s/%version%/$fqos/g" "$pkgsinfodir/$deploy_name-$fqos.plist.tmp" > "$pkgsinfodir/$deploy_name-$fqos.plist"
     fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/arm64/$munki_name-$fqos.plist")
+    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
     install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
     head -n "$install_hash" "$pkgsinfodir/$deploy_name-$fqos.plist" > "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
     echo '	<key>installable_condition</key>' >> "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
@@ -276,109 +276,88 @@ log_message() {
 }
 
 munkiimport_stage_os() {
-    log_message "stdout" "Performing munkiimport for ARM version of macOS $fqos"
-    munkiimport -n --installer-type stage_os_installer --name="$munki_name" \
-    -c "$munki_catalog" --category="$munki_category" --developer=Apple \
-    --displayname="macOS $os_nice" --description="Downloads macOS $os_nice $fqos" \
-    --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
-    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
-    --arch=arm64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
-    --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
+    log_message "stdout" "Performing munkiimport for macOS $fqos"
+    munkiimport -n --installer-type stage_os_installer \
+    --name="$munki_name" \
+    -c "$munki_catalog" \
+    --category="$munki_category" \
+    --developer=Apple \
+    --displayname="macOS $os_nice" \
+    --description="Downloads macOS $os_nice $fqos" \
+    --icon="${munki_name}_$os_munki.png" \
+    --minimum_munki_version="$munki_mini" \
+    --maximum_os_version="$os_maxi" \
+    --minimum_os_version="$os_mini" \
+    --RestartAction=RequireRestart \
+    --repo-url=file://"$RepoPath" \
+    --subdirectory="$munki_path" \
+    --unattended_install \
+    --unattended_uninstall \
     --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
     sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
-    mv "$pkgsinfodir/$munki_name-$fqos-arm64" "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
+    mv "$pkgsinfodir/$munki_name-$fqos" "$pkgsinfodir/$munki_name-$fqos.plist"
     sed -i.tmp \
         -e "s/root/misty/" \
         -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
         -e 's/installable_condition_disabled/installable_condition/g' \
         -e "s|$munki_path/Install macOS $os_nice-$fqos.dmg|$munki_path/$munki_name-$fqos.dmg|g" \
-        "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
+        "$pkgsinfodir/$munki_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
-        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/arm64/$munki_name-$fqos.plist")
-        head -n "$localized" "$pkgsinfodir/arm64/$munki_name-$fqos.plist" > "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
-        cat "$Base_Path"/usr/localized_stage_os.txt >> "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
-        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/arm64/$munki_name-$fqos.plist" >> "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
-        sed "s/%version%/$fqos/g" "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp" > "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
+        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$munki_name-$fqos.plist")
+        head -n "$localized" "$pkgsinfodir/$munki_name-$fqos.plist" > "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+        cat "$Base_Path/usr/localized_macos.txt" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/$munki_name-$fqos.plist" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+        sed "s/%version%/$fqos/g" "$pkgsinfodir/$munki_name-$fqos.plist.tmp" > "$pkgsinfodir/$munki_name-$fqos.plist"
     fi
-    pre_inserts=$(awk '/<key>supported_architectures<\/key>/ {print NR-1; exit}' "$pkgsinfodir/arm64/$munki_name-$fqos.plist")
-    head -n "$pre_inserts" "$pkgsinfodir/arm64/$munki_name-$fqos.plist" > "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
-    cat "$Template/pre_inserts_arm64" >> "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
-    awk -v pre_inserts="${pre_inserts}" 'NR > pre_inserts' "$pkgsinfodir/arm64/$munki_name-$fqos.plist" >> "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp"
-    mv "$pkgsinfodir/arm64/$munki_name-$fqos.plist.tmp" "$pkgsinfodir/arm64/$munki_name-$fqos.plist"
+    pre_inserts=$(awk '/<key>unattended_install<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$munki_name-$fqos.plist")
+    head -n "$pre_inserts" "$pkgsinfodir/$munki_name-$fqos.plist" > "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+    cat "$Template/preupgrade_alert" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+    awk -v pre_inserts="${pre_inserts}" 'NR > pre_inserts' "$pkgsinfodir/$munki_name-$fqos.plist" >> "$pkgsinfodir/$munki_name-$fqos.plist.tmp"
+    mv "$pkgsinfodir/$munki_name-$fqos.plist.tmp" "$pkgsinfodir/$munki_name-$fqos.plist"
 }
 
-munkiimport_startos() {
-    log_message "stdout" "Performing munkiimport for Intel version of macOS $fqos"
-    munkiimport -n --installer-type startosinstall --name="$munki_name" \
-    -c "$munki_catalog" --category="$munki_category" --developer=Apple \
-    --displayname="macOS $os_nice" --description="Installs macOS $os_nice $fqos" \
-    --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
-    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
-    --arch=x86_64 --RestartAction=RequireRestart --repo-url=file://"$RepoPath" \
-    --subdirectory="$munki_path" \
-    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
-    sleep 20 # wait for plist to be created
-    rm "$pkgsdir/Install macOS $os_nice-$fqos.dmg"
-    mv "$pkgsinfodir/$munki_name-$fqos-x86_64" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    # munkiimport creates different dmgs for stage_os and startos. We grab the required data from the stage_os plist to use its dmg
-    installer_item_hash_stage_os=$(plutil -extract installer_item_hash raw -o - "$pkgsinfodir/arm64/$munki_name-$fqos.plist")
-    installer_item_size_stage_os=$(plutil -extract installer_item_size raw -o - "$pkgsinfodir/arm64/$munki_name-$fqos.plist")
-    plutil -replace installer_item_hash -string "$installer_item_hash_stage_os" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    plutil -replace installer_item_size -integer "$installer_item_size_stage_os" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    sed -i.tmp \
-        -e "s/root/misty/" \
-        -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
-        -e 's/installable_condition_disabled/installable_condition/g' \
-        -e "s|$munki_path/Install macOS $os_nice-$fqos.dmg|$munki_path/$munki_name-$fqos.dmg|g" \
-        "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    if [[ $localization == "yes" ]]; then
-        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/x86_64/$munki_name-$fqos.plist")
-        head -n "$localized" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist" > "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
-        cat "$Base_Path/usr/localized_startos.txt" >> "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
-        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/x86_64/$munki_name-$fqos.plist" >> "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
-        sed "s/%version%/$fqos/g" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp" > "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-    fi
-    pre_inserts=$(awk '/<key>supported_architectures<\/key>/ {print NR-1; exit}' "$pkgsinfodir/x86_64/$munki_name-$fqos.plist")
-    head -n "$pre_inserts" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist" > "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
-    cat "$Template/pre_inserts_x86_64" >> "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
-    awk -v pre_inserts="${pre_inserts}" 'NR > pre_inserts' "$pkgsinfodir/x86_64/$munki_name-$fqos.plist" >> "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp"
-    mv "$pkgsinfodir/x86_64/$munki_name-$fqos.plist.tmp" "$pkgsinfodir/x86_64/$munki_name-$fqos.plist"
-}
-
-preloader_arm() {
-    log_message "stdout" "Creating preloader for ARM version of macOS $fqos"
-    munkiimport -n --installer-type copy_from_dmg --name="$munki_name"_arm \
-    -c "$munki_catalog" --category="$munki_category" --developer=Apple \
-    --displayname="macOS $os_nice preparation"  --description="Provisions macOS $os_nice $fqos for installation"  \
-    --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
-    --maximum_os_version="$os_maxi" --minimum_os_version="$os_mini" \
+preloader() {
+    log_message "stdout" "Creating preloader for macOS $fqos"
+    munkiimport -n --installer-type copy_from_dmg \
+    --name="$munki_name"_pre \
+    -c "$munki_catalog" \
+    --category="$munki_category" \
+    --developer=Apple \
+    --displayname="macOS $os_nice preparation" \
+    --description="Provisions macOS $os_nice $fqos for installation"  \
+    --icon="${munki_name}_$os_munki.png" \
+    --minimum_munki_version="$munki_mini" \
+    --maximum_os_version="$os_maxi" \
+    --minimum_os_version="$os_mini" \
     --postinstall_script="$Template/postinstall_script_installer" \
-    --arch=arm64 --repo-url=file://"$RepoPath" \
-    --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
+    --repo-url=file://"$RepoPath" \
+    --subdirectory="$munki_path" \
+    --unattended_install \
+    --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
     sleep 20 # wait for plist to be created
-    mv "$pkgsinfodir/${munki_name}_arm-$fqos-arm64" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
-    sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
+    mv "$pkgsinfodir/${munki_name}_pre-$fqos" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
+    sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     # Retrieve installable_condition from munkiimport_macos and fill in
     if [[ $localization == "yes" ]]; then
-        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist")
-        head -n "$localized" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" > "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
-        cat "$Base_Path/usr/localized_arm.txt" >> "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
-        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" >> "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
-        sed "s/%version%/$fqos/g" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp" > "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
+        localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/${munki_name}_pre-$fqos.plist")
+        head -n "$localized" "$pkgsinfodir/${munki_name}_pre-$fqos.plist" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
+        cat "$Base_Path/usr/localized_preloader.txt" >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
+        awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/${munki_name}_pre-$fqos.plist" >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
+        sed "s/%version%/$fqos/g" "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/arm64/$munki_name-$fqos.plist")
-    install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist")
-    head -n "$install_hash" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" > "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
-    echo '	<key>installable_condition</key>' >> "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
-    cat <<EOF >> "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
+    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
+    install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/${munki_name}_pre-$fqos.plist")
+    head -n "$install_hash" "$pkgsinfodir/${munki_name}_pre-$fqos.plist" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
+    echo '	<key>installable_condition</key>' >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
+    cat <<EOF >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
 $(echo "$install_condition")
 EOF
-    awk -v install_hash="${install_hash}" 'NR > install_hash' "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist" >> "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
-    sed "s/%os_nice%/$os_nice/g" "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp" > "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist"
-    rm "$pkgsinfodir/arm64/${munki_name}_arm-$fqos.plist.tmp"
+    awk -v install_hash="${install_hash}" 'NR > install_hash' "$pkgsinfodir/${munki_name}_pre-$fqos.plist" >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
+    sed "s/%os_nice%/$os_nice/g" "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
+    rm "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
 }
 
 repo_stuff () {
@@ -386,9 +365,8 @@ repo_stuff () {
     rm_previous_files
     download_macos
     munkiimport_stage_os
-    preloader_arm
+    preloader
     deploy_macos
-    munkiimport_startos
     cleanup
 }
 
@@ -447,8 +425,6 @@ rm_previous_files() {
         # Delete all associated files using glob patterns
         rm -f "${pkgsdir}/${munki_name}-${version_to_remove}.dmg"
         rm -f "${pkgsinfodir}"/*"${version_to_remove}".plist
-        rm -f "${pkgsinfodir}/arm64"/*"${version_to_remove}".plist
-        rm -f "${pkgsinfodir}/x86_64"/*"${version_to_remove}".plist
 
         # Log only the removed version once
         log_message "stdout" "Version $version_to_remove was removed."
@@ -466,7 +442,7 @@ if [[ ! -t 1 ]]; then
     exec 2> >(while IFS= read -r line; do log_message "stderr" "$line"; done)
 fi
 
-repo_required=30 # Size required on repo for arm64 and x86_64 installer in GB, needed during creation
+repo_required=30 # Size required on repo for macOS installer in GB, needed during creation
 diskspace_required=32 # Size required on boot disk for installer and cache in GB
 Base_Path="/var/root/misty"
 Mist_Path="/Users/Shared/Mist"
@@ -550,7 +526,7 @@ if [[ ! -f "$Base_Path/usr/config.txt" ]]; then
         read yn
         case $yn in
             [Yy]* )
-            cp "$Template/localized_arm.txt" "$Template/localized_deploy.txt" "$Template/localized_stage_os.txt" "$Template/localized_startos.txt" "$Base_Path/usr"
+            cp "$Template/localized_preloader.txt" "$Template/localized_deploy.txt" "$Template/localized_macos.txt" "$Base_Path/usr"
             sed -i '' 's/localization="no"/localization="yes"/g' "$Base_Path"/usr/config.txt
             echo "Please adjust the file config.txt and any localized_*.txt files in $Base_Path/usr to your needs now using an editor like vi or nano."
             exit 0 ;;
@@ -602,17 +578,6 @@ check_repo
 
 Repo_uid_gid=$(stat -f "%Su:%Sg" "$RepoPath")
 RepoOwner=$(stat -f "%Su" "$RepoPath")
-
-if [[ ! -d "$pkgsinfodir"/arm64 ]]; then
-    sudo -u "$RepoOwner" mkdir -p "$pkgsinfodir/arm64"
-    chmod 755 "$pkgsinfodir"/arm64
-    chown "$Repo_uid_gid" "$pkgsinfodir/arm64"
-fi
-if [[ ! -d "$pkgsinfodir"/x86_64 ]]; then
-    sudo -u "$RepoOwner" mkdir -p "$pkgsinfodir/x86_64"
-    chmod 755 "$pkgsinfodir/x86_64"
-    chown "$Repo_uid_gid" "$pkgsinfodir/x86_64"
-fi
 
 ################################################################################
 # Update checks                                                                #
