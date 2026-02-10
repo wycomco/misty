@@ -35,7 +35,7 @@ if [[ -f "$Base_Path/usr/localized_arm.txt" ]]; then
   /bin/mv "$Base_Path/usr/localized_stage_os.txt" "$Base_Path/usr/localized_stage_os_legacy.txt"
   /bin/mv "$Base_Path/usr/localized_startos.txt" "$Base_Path/usr/localized_startos_legacy.txt"
   cp "$Template/localized_preloader.txt" "$Template/localized_macos.txt" "$Base_Path/usr"
-  sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "You need to update your localized files. Please see the CHANGELOG file of the misty project for further instructions on how to migrate in version 0.2.7." with title "misty Installer" buttons {"Got it"} default button "Got it"'
+  sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "You need to update your localized files. Please see the CHANGELOG file of the misty project for further instructions on how to migrate in version 0.2.7 or later." with title "misty Installer" buttons {"Got it"} default button "Got it"'
 fi
 
 exit 0
