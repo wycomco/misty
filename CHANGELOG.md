@@ -21,6 +21,7 @@ The former files will not be deleted, but feature the suffix `_legacy` in their 
 - Function `munkiimport_stage_os` (now serves ARM and Intel)
 - Function `preloader_arm` (now serves ARM and Intel, renamed to `preloader`)
 - All plists are created in `$pkgsinfodir` base dir instead of `arm64` and `x86_64` subdirs
+- The formerly only to Apple Silicon scoped preloader has been renamed to reflect the changes. It now features the suffix `_pre` instead of `_arm`. **Please update your manifest(s) accordingly!**
 - Renaming/removal of files in skeleton directory
 
 

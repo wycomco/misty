@@ -6,6 +6,16 @@ log_file="/var/log/misty.log"
 Base_Path="/var/root/misty"
 Template="$Base_Path/skel"
 
+# Collector for installer messages (shown once at the end)
+messages=""
+add_msg() {
+  local m="$1"
+  if [[ -n "$messages" ]]; then
+    messages+=$'\n\n'
+  fi
+  messages+="$m"
+}
+
 # Check if config file already exists
 if [[ -f "$config_file" ]]; then
   if grep -q '^munki_catalog_13="' "$config_file"; then
@@ -18,7 +28,7 @@ if [[ -f "$config_file" ]]; then
 munki_catalog_26="testing"
 ' "$config_file"
     echo "Added 'munki_catalog_26=\"testing\"' line after 'munki_catalog_15' in $config_file by installer." >> "$log_file"
-    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added »munki_catalog_26=\"testing\"« line after »munki_catalog_15« in $config_file by installer." with title "misty Installer" buttons {"Got it"} default button "Got it"'
+    add_msg "Added »munki_catalog_26=\"testing\"« line after »munki_catalog_15« in $config_file by installer."
   fi
 fi
 
@@ -27,15 +37,29 @@ if [ ! -L "/usr/local/bin/misty" ]; then
 fi
 
 # Remove legacy skel files if present
-/bin/rm "$Template/pre_inserts_arm64"
-/bin/rm "$Template/pre_inserts_x86_64"
+/bin/rm -f "$Template/pre_inserts_arm64"
+/bin/rm -f "$Template/pre_inserts_x86_64"
 # Condition to check if we come from 0.2.6 or prior
 if [[ -f "$Base_Path/usr/localized_arm.txt" ]]; then
   /bin/mv "$Base_Path/usr/localized_arm.txt" "$Base_Path/usr/localized_arm_legacy.txt"
   /bin/mv "$Base_Path/usr/localized_stage_os.txt" "$Base_Path/usr/localized_stage_os_legacy.txt"
   /bin/mv "$Base_Path/usr/localized_startos.txt" "$Base_Path/usr/localized_startos_legacy.txt"
   cp "$Template/localized_preloader.txt" "$Template/localized_macos.txt" "$Base_Path/usr"
-  sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "You need to update your localized files. Please see the CHANGELOG file of the misty project for further instructions on how to migrate in version 0.2.7 or later." with title "misty Installer" buttons {"Got it"} default button "Got it"'
+  add_msg "You need to update your localized files."
+fi
+
+# Show a single dialog if we have any messages
+if [[ -n "$messages" && -n "$currentUser" ]]; then
+  tmp_message_file="$(mktemp -t misty_msg.XXXXXX)"
+  printf '%s\n' "$messages" > "$tmp_message_file"
+
+  sudo -u "$currentUser" osascript <<EOF
+set p to POSIX path of "$tmp_message_file"
+set t to do shell script "cat " & quoted form of p
+tell application "System Events" to display dialog t with title "misty Installer" buttons {"Got it"} default button 1
+EOF
+
+  rm -f "$tmp_message_file"
 fi
 
 exit 0
