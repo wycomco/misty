@@ -1,8 +1,19 @@
 #!/bin/zsh
 
 config_file="/var/root/misty/usr/config.txt"
-currentUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 log_file="/var/log/misty.log"
+Base_Path="/var/root/misty"
+Template="$Base_Path/skel"
+
+# Collector for installer messages (shown once at the end)
+messages=""
+add_msg() {
+  local m="$1"
+  if [[ -n "$messages" ]]; then
+    messages+=$'\n\n'
+  fi
+  messages+="$m"
+}
 
 # Check if config file already exists
 if [[ -f "$config_file" ]]; then
@@ -16,12 +27,58 @@ if [[ -f "$config_file" ]]; then
 munki_catalog_26="testing"
 ' "$config_file"
     echo "Added 'munki_catalog_26=\"testing\"' line after 'munki_catalog_15' in $config_file by installer." >> "$log_file"
-    sudo -u "$currentUser" osascript -e 'tell app "System Events" to display dialog "Added »munki_catalog_26=\"testing\"« line after »munki_catalog_15« in $config_file by installer." with title "misty Installer" buttons {"Got it"} default button "Got it"'
+    add_msg "Added 'munki_catalog_26=\"testing\"' line after 'munki_catalog_15' in $config_file by installer."
   fi
 fi
 
 if [ ! -L "/usr/local/bin/misty" ]; then
-    ln -s "/usr/local/wycomco/misty" "/usr/local/bin/misty"
+  ln -s "/usr/local/wycomco/misty" "/usr/local/bin/misty"
+fi
+
+# Remove legacy skel files if present
+/bin/rm -f "$Template/pre_inserts_arm64"
+/bin/rm -f "$Template/pre_inserts_x86_64"
+
+# Condition to check if we come from 0.2.6 or prior
+if [[ -f "$Base_Path/usr/localized_arm.txt" ]]; then
+  /bin/mv "$Base_Path/usr/localized_arm.txt" "$Base_Path/usr/localized_arm_legacy.txt"
+  /bin/mv "$Base_Path/usr/localized_stage_os.txt" "$Base_Path/usr/localized_stage_os_legacy.txt"
+  /bin/mv "$Base_Path/usr/localized_startos.txt" "$Base_Path/usr/localized_startos_legacy.txt"
+  cp "$Template/localized_preloader.txt" "$Template/localized_macos.txt" "$Base_Path/usr"
+  add_msg "You need to update your localized files."
+fi
+
+# Show a single dialog if we have any messages
+if [[ -n "$messages" ]]; then
+  tmp_message_file="$(/usr/bin/mktemp -t misty_msg.XXXXXX)"
+  printf '%s\n' "$messages" > "$tmp_message_file"
+
+  # Determine current console user and UID
+  currentUser=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk '/Name :/ { print $3 }')
+  currentUID=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk '/UID :/ { print $3 }')
+
+  if [[ -n "$currentUID" && "$currentUser" != "loginwindow" ]]; then
+    # Use osascript -e lines (no heredoc) and read the temp file inside AppleScript
+    /bin/launchctl asuser "$currentUID" /usr/bin/osascript \
+      -e 'set p to POSIX file "'"$tmp_message_file"'"' \
+      -e 'set t to read p' \
+      -e 'display dialog t with title "misty Installer" buttons {"Got it"} default button 1' \
+    || {
+      # Fallback: if the dialog fails, log the messages
+      {
+        printf '%s %s\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S')" "Postinstall notice: dialog failed. Messages:"
+        printf '%s\n\n' "$messages"
+      } >> "$log_file"
+    }
+  else
+    # No logged-in GUI user; log the messages with a trailing blank line
+    {
+      printf '%s %s\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S')" "Postinstall notice: displaying dialog skipped (no GUI user). Messages:"
+      printf '%s\n\n' "$messages"
+    } >> "$log_file"
+  fi
+
+  /bin/rm -f "$tmp_message_file"
 fi
 
 exit 0
