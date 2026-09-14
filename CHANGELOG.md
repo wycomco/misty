@@ -12,6 +12,7 @@
 
 ### Changed
 - `munkipkg` is replaced by `swiftpkg` in the build mechanism – [PR#33](https://github.com/wycomco/misty/pull/33)
+- Extraction of macOS version from `mist-cli` output now ignores optional major version prefix – [PR#36](https://github.com/wycomco/misty/pull/36)
 
 
 ## [0.2.7](https://github.com/wycomco/misty/releases/tag/v0.2.7) – 2026-02-10
