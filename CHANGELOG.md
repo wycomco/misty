@@ -3,6 +3,13 @@
 
 ## Unreleased
 
+### Added
+- Support for macOS Golden Gate – [PR#32](https://github.com/wycomco/misty/pull/32)
+- Limit macOS Golden Gate to ARM, no changes to prior versions
+
+### Removed
+- Support for macOS Sonoma – [PR#32](https://github.com/wycomco/misty/pull/32)
+
 
 ## [0.2.7](https://github.com/wycomco/misty/releases/tag/v0.2.7) – 2026-02-10
 
