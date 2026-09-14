@@ -552,9 +552,9 @@ echo "RepoName: $RepoName" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
 echo "munki_name: $munki_name" > /dev/null
 echo "deploy_name: $deploy_name" > /dev/null
-echo "munki_catalog_14: $munki_catalog_14" > /dev/null
 echo "munki_catalog_15: $munki_catalog_15" > /dev/null
 echo "munki_catalog_26: $munki_catalog_26" > /dev/null
+echo "munki_catalog_27: $munki_catalog_27" > /dev/null
 echo "munki_category: $munki_category" > /dev/null
 echo "time_input: $time_input" > /dev/null
 echo "localization: $localization" > /dev/null
@@ -584,17 +584,25 @@ RepoOwner=$(stat -f "%Su" "$RepoPath")
 ################################################################################
 
 # We want to check each major version seperately
+mist list installer --compatible --latest "macOS Golden Gate" | grep GB > "$LogPath/tmp_state_27.txt"
 mist list installer --compatible --latest "macOS Tahoe" | grep GB > "$LogPath/tmp_state_26.txt"
 mist list installer --compatible --latest "macOS Sequoia" | grep GB > "$LogPath/tmp_state_15.txt"
-mist list installer --compatible --latest "macOS Sonoma" | grep GB > "$LogPath/tmp_state_14.txt"
 
 # Remove color codes resulting from grep and clean up
+rm_color_codes "$LogPath/tmp_state_27.txt" > "$LogPath/current_state_27.txt"
 rm_color_codes "$LogPath/tmp_state_26.txt" > "$LogPath/current_state_26.txt"
 rm_color_codes "$LogPath/tmp_state_15.txt" > "$LogPath/current_state_15.txt"
-rm_color_codes "$LogPath/tmp_state_14.txt" > "$LogPath/current_state_14.txt"
 /bin/rm -f "$LogPath/tmp_state_*.txt"
 
 # Compare the content with the previous state if present, ignoring last two columns (date and compatibliity)
+if [ -f "$LogPath/previous_state_27.txt" ]; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_27.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_27.txt"); then
+        macos_27=$(extract_macos_version Golden Gate "$LogPath/current_state_27.txt")
+    fi
+else
+    macos_27=$(extract_macos_version Golden Gate "$LogPath/current_state_27.txt")
+fi
+
 if [ -f "$LogPath/previous_state_26.txt" ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_26.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_26.txt"); then
         macos_26=$(extract_macos_version Tahoe "$LogPath/current_state_26.txt")
@@ -611,14 +619,6 @@ else
     macos_15=$(extract_macos_version Sequoia "$LogPath/current_state_15.txt")
 fi
 
-if [ -f "$LogPath/previous_state_14.txt" ]; then
-    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_14.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_14.txt"); then
-        macos_14=$(extract_macos_version Sonoma "$LogPath/current_state_14.txt")
-    fi
-else
-    macos_14=$(extract_macos_version Sonoma "$LogPath/current_state_14.txt")
-fi
-
 # Clean up tmp files
 rm -rf "$LogPath/tmp_state_*.txt"
 
@@ -627,6 +627,17 @@ rm -rf "$LogPath/tmp_state_*.txt"
 ################################################################################
 
 # Execute loops only if version has changed
+if [ -n "$macos_27" ]; then
+    fqos=$macos_27
+    munki_catalog=$munki_catalog_27
+    munki_mini=7.3
+    os_major="27"
+    os_maxi="26.99"
+    os_mini="10.15"
+    os_munki="golden_gate"
+    os_nice="Golden Gate"
+    repo_stuff
+fi
 if [ -n "$macos_26" ]; then
     fqos=$macos_26
     munki_catalog=$munki_catalog_26
@@ -649,24 +660,13 @@ if [ -n "$macos_15" ]; then
     os_nice="Sequoia"
     repo_stuff
 fi
-if [ -n "$macos_14" ]; then
-    fqos=$macos_14
-    munki_catalog=$munki_catalog_14
-    munki_mini=6.3.2
-    os_major="14"
-    os_maxi="13.99"
-    os_mini="10.13"
-    os_munki="sonoma"
-    os_nice="Sonoma"
-    repo_stuff
-fi
 
 ################################################################################
 # Postinstall, makecatalogs                                                    #
 ################################################################################
 
 # Only proceed if any new package(s) were created
-if [[ ( -n "$macos_14" || -n "$macos_15" || -n "$macos_26" ) ]]; then
+if [[ ( -n "$macos_15" || -n "$macos_26" || -n "$macos_27" ) ]]; then
     # Ensure correct permissions in full misty path
     munki_path="${munki_path%/}" # Remove trailing slash if present
     IFS="/" read -A subdirs <<< "$munki_path" # Split munki_path into its components (subdirectories)
