@@ -600,10 +600,10 @@ rm_color_codes "$LogPath/tmp_state_15.txt" > "$LogPath/current_state_15.txt"
 # Compare the content with the previous state if present, ignoring last two columns (date and compatibliity)
 if [ -f "$LogPath/previous_state_27.txt" ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_27.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_27.txt"); then
-        macos_27=$(extract_macos_version Golden Gate "$LogPath/current_state_27.txt")
+        macos_27=$(extract_macos_version "Golden Gate" "$LogPath/current_state_27.txt")
     fi
 else
-    macos_27=$(extract_macos_version Golden Gate "$LogPath/current_state_27.txt")
+    macos_27=$(extract_macos_version "Golden Gate" "$LogPath/current_state_27.txt")
 fi
 
 if [ -f "$LogPath/previous_state_26.txt" ]; then
