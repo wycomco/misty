@@ -163,6 +163,7 @@ cleanup() {
 deploy_macos() {
     log_message "stdout" "Creating deployment item for macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
+    ${=arch_flags} \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice preparation"  \
     --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
     --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
@@ -279,6 +280,7 @@ munkiimport_stage_os() {
     log_message "stdout" "Performing munkiimport for macOS $fqos"
     munkiimport -n --installer-type stage_os_installer \
     --name="$munki_name" \
+    ${=arch_flags} \
     -c "$munki_catalog" \
     --category="$munki_category" \
     --developer=Apple \
@@ -322,6 +324,7 @@ preloader() {
     log_message "stdout" "Creating preloader for macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg \
     --name="$munki_name"_pre \
+    ${=arch_flags} \
     -c "$munki_catalog" \
     --category="$munki_category" \
     --developer=Apple \
@@ -636,6 +639,7 @@ if [ -n "$macos_27" ]; then
     os_mini="10.15"
     os_munki="golden_gate"
     os_nice="Golden Gate"
+    arch_flags="--arch arm64" # Golden Gate only supports Apple Silicon
     repo_stuff
 fi
 if [ -n "$macos_26" ]; then
@@ -647,6 +651,7 @@ if [ -n "$macos_26" ]; then
     os_mini="10.15"
     os_munki="tahoe"
     os_nice="Tahoe"
+    arch_flags="" # supports x86_64 and arm64, no --arch filter needed
     repo_stuff
 fi
 if [ -n "$macos_15" ]; then
@@ -658,6 +663,7 @@ if [ -n "$macos_15" ]; then
     os_mini="10.13"
     os_munki="sequoia"
     os_nice="Sequoia"
+    arch_flags="" # supports x86_64 and arm64, no --arch filter needed
     repo_stuff
 fi
 
