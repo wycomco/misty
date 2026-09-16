@@ -171,7 +171,7 @@ deploy_macos() {
     --postinstall_script="$Template"/postinstall_script_installer \
      --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
-    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
+    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
     mv "$pkgsinfodir/$deploy_name-$fqos" "$pkgsinfodir/$deploy_name-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/$deploy_name-$fqos.plist"
@@ -297,7 +297,7 @@ munkiimport_stage_os() {
     --subdirectory="$munki_path" \
     --unattended_install \
     --unattended_uninstall \
-    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
+    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
@@ -341,7 +341,7 @@ preloader() {
     --subdirectory="$munki_path" \
     --unattended_install \
     --unattended_uninstall \
-    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
+    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
     mv "$pkgsinfodir/${munki_name}_pre-$fqos" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
