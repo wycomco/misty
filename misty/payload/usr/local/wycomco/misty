@@ -173,7 +173,7 @@ deploy_macos() {
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
-    mv "$pkgsinfodir/$deploy_name-$fqos" "$pkgsinfodir/$deploy_name-$fqos.plist"
+    mv "$pkgsinfodir/$deploy_name-$fqos$arch_suffix" "$pkgsinfodir/$deploy_name-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/$deploy_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
@@ -301,7 +301,7 @@ munkiimport_stage_os() {
     sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
-    mv "$pkgsinfodir/$munki_name-$fqos" "$pkgsinfodir/$munki_name-$fqos.plist"
+    mv "$pkgsinfodir/$munki_name-$fqos$arch_suffix" "$pkgsinfodir/$munki_name-$fqos.plist"
     sed -i.tmp \
         -e "s/root/misty/" \
         -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
@@ -343,7 +343,7 @@ preloader() {
     --unattended_uninstall \
     --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
-    mv "$pkgsinfodir/${munki_name}_pre-$fqos" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
+    mv "$pkgsinfodir/${munki_name}_pre-$fqos$arch_suffix" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     # Retrieve installable_condition from munkiimport_macos and fill in
     if [[ $localization == "yes" ]]; then
@@ -642,6 +642,9 @@ if [ -n "$macos_27" ]; then
     os_munki="golden_gate"
     os_nice="Golden Gate"
     arch_flags="--arch arm64" # Golden Gate only supports Apple Silicon
+    # munkiimport appends "-<arch>" to the pkginfo filename whenever exactly one
+    # --arch is given; keep this in sync with arch_flags above.
+    arch_suffix="-arm64"
     repo_stuff
 fi
 if [ -n "$macos_26" ]; then
@@ -654,6 +657,7 @@ if [ -n "$macos_26" ]; then
     os_munki="tahoe"
     os_nice="Tahoe"
     arch_flags="" # supports x86_64 and arm64, no --arch filter needed
+    arch_suffix=""
     repo_stuff
 fi
 if [ -n "$macos_15" ]; then
@@ -666,6 +670,7 @@ if [ -n "$macos_15" ]; then
     os_munki="sequoia"
     os_nice="Sequoia"
     arch_flags="" # supports x86_64 and arm64, no --arch filter needed
+    arch_suffix=""
     repo_stuff
 fi
 
