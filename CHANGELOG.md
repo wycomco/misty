@@ -3,6 +3,11 @@
 
 ## Unreleased
 
+No unreleased changes.
+
+
+## [0.2.8](https://github.com/wycomco/misty/releases/tag/v0.2.8) – 2026-09-19
+
 ### Added
 - Support for macOS Golden Gate – [PR#32](https://github.com/wycomco/misty/pull/32)
 - Limit macOS Golden Gate to ARM, no changes to prior versions
