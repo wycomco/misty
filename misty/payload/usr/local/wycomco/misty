@@ -381,12 +381,14 @@ rm_color_codes() {
 
 rm_previous_files() {
     setopt nullglob
-    if ! ls -1 "${pkgsdir}/${munki_name}-${os_major}"* >/dev/null 2>&1; then
+    local major_matches=("${pkgsdir}/${munki_name}-${os_major}"*)
+    if (( ${#major_matches[@]} == 0 )); then
         log_message "stdout" "No files matching $munki_name version $os_major found. Not removing any files."
         return
     fi
 
-    if  ls -1 "${pkgsdir}/${munki_name}-${fqos}"* >/dev/null 2>&1; then
+    local current_matches=("${pkgsdir}/${munki_name}-${fqos}"*)
+    if (( ${#current_matches[@]} > 0 )); then
         log_message "stdout" "The current version is already present in the repo, it will be overwritten."
     fi
 
