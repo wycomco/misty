@@ -640,7 +640,7 @@ if [ -n "$macos_27" ]; then
     munki_mini=7.3
     os_major="27"
     os_maxi="26.99"
-    os_mini="10.15"
+    os_mini="11.0"
     os_munki="golden_gate"
     os_nice="Golden Gate"
     arch_flags="--arch arm64" # Golden Gate only supports Apple Silicon
