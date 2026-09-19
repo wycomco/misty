@@ -74,13 +74,13 @@ The script *misty* itself is located in `/usr/local/wycomo` and has an alias in 
 
 ## Icons
 
-The resulting payloads expect png files in the `icon` subfolder of the munki repo following the naming conventions `%munki_name%_version.png` with `%munki_name%` being the name you have specified in the `/Users/Shared/Mist/usr/config.txt` file (standard = *macos*) and `version` being the major macOS version like *ventura*, *sonoma* or *sequoia*. Example: `macos_seqouia.png`.
+The resulting payloads expect png files in the `icon` subfolder of the munki repo following the naming conventions `%munki_name%_version.png` with `%munki_name%` being the name you have specified in the `/var/root/misty/usr/config.txt` file (standard = *macos*) and `version` being the major macOS version like *ventura*, *sonoma* or *sequoia*. Example: `macos_seqouia.png`.
 
 ## System Requirements
 
-This script was tested on macOS 15 Sequoia and macOS 14 Sonoma. It should also work with earlier versions of macOS, but this has not been tested.
+This script was tested on macOS 26 Tahoe, macOS 15 Sequoia and macOS 14 Sonoma. It should also work with earlier versions of macOS, but this has not been tested.
 
-You should have at least 60 GB of free disk space available during the first run in order to package all three major versions.
+You should have at least 60 GB of free disk space available during the first run in order to package all three major versions. You need to double the size in case the repo is locally on your boot drive.
 
 ## Prerequisites
 
@@ -113,7 +113,7 @@ If you are still facing issues, also grant `Terminal.app` (located in `/Applicat
 1. In the repo, rename the dmg file of the macOS installer to an earlier version. Then, rename all plist files of that version, too. Edit each plist file so the `item_installer_location` is updated to the name of the renamed dmg file. Don’t forget to also adjust the `version` string at the bottom of the files. This will ensure that the removal of older versions (at least two) will get tested.
 2. Alternatively, just delete all plists and the corresponding dmg. If you followed step 1, ignore this step.
 3. Do a `makecatalogs` on the repo.
-4. For each major version that you altered or deleted, you need to edit the file `/Users/Shared/Mist/previous_state_[major_version].txt`. Just change the current version key to another number. You need root permissions for that.
+4. For each major version that you altered or deleted, you need to edit the file `/var/root/misty/Logs/previous_state_[major_version].txt`. Just change the current version key to another number. You need root permissions for that.
 5. Then you can run *misty* manually or wait for the LaunchDaemon to do its job.
 
 ## Known Issues

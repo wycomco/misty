@@ -163,6 +163,7 @@ cleanup() {
 deploy_macos() {
     log_message "stdout" "Creating deployment item for macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg --name="$deploy_name" \
+    ${=arch_flags} \
     -c "$munki_catalog" --category="$munki_category" --developer=Apple --displayname="macOS $os_nice preparation"  \
     --description="Downloads macOS $os_nice installer $fqos and places it in the Applications directory for installation at a later time."  \
     --icon="${munki_name}_$os_munki.png" --minimum_munki_version="$munki_mini" \
@@ -170,9 +171,9 @@ deploy_macos() {
     --postinstall_script="$Template"/postinstall_script_installer \
      --repo-url=file://"$RepoPath" \
     --subdirectory="$munki_path" --unattended_install --unattended_uninstall \
-    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
+    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
-    mv "$pkgsinfodir/$deploy_name-$fqos" "$pkgsinfodir/$deploy_name-$fqos.plist"
+    mv "$pkgsinfodir/$deploy_name-$fqos$arch_suffix" "$pkgsinfodir/$deploy_name-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/$deploy_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
         localized=$(awk '/<key>maximum_os_version<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
@@ -181,7 +182,7 @@ deploy_macos() {
         awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/$deploy_name-$fqos.plist" >> "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
         sed "s/%version%/$fqos/g" "$pkgsinfodir/$deploy_name-$fqos.plist.tmp" > "$pkgsinfodir/$deploy_name-$fqos.plist"
     fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
+    install_condition=$(grep 'device_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
     install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
     head -n "$install_hash" "$pkgsinfodir/$deploy_name-$fqos.plist" > "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
     echo '	<key>installable_condition</key>' >> "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
@@ -217,7 +218,9 @@ exit_error() {
 }
 
 extract_macos_version() {
-    sed -n 's/.*macOS '"$1"'[^0-9]*\([0-9.]*\).*/\1/p' "$2" | tr -d '[:space:]'
+    # Ignore <major> prefixes from mist-cli like "macOS <major> <Name>" (e.g. "macOS 27 Golden Gate")
+    # instead of the older "macOS <Name>" (e.g. "macOS Tahoe") style, so the major version number is optional here.
+    sed -E -n 's/.*macOS ([0-9]+ )?'"$1"'[^0-9]*([0-9.]*).*/\2/p' "$2" | tr -d '[:space:]'
 }
 
 extract_time_input() {
@@ -279,6 +282,7 @@ munkiimport_stage_os() {
     log_message "stdout" "Performing munkiimport for macOS $fqos"
     munkiimport -n --installer-type stage_os_installer \
     --name="$munki_name" \
+    ${=arch_flags} \
     -c "$munki_catalog" \
     --category="$munki_category" \
     --developer=Apple \
@@ -293,11 +297,11 @@ munkiimport_stage_os() {
     --subdirectory="$munki_path" \
     --unattended_install \
     --unattended_uninstall \
-    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null
+    --pkgvers="$fqos" "$Mist_Path/Install macOS $os_nice.app" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
     # File name and plist content manipulations
     mv "$pkgsdir/Install macOS $os_nice-$fqos.dmg" "$pkgsdir/$munki_name-$fqos.dmg"
-    mv "$pkgsinfodir/$munki_name-$fqos" "$pkgsinfodir/$munki_name-$fqos.plist"
+    mv "$pkgsinfodir/$munki_name-$fqos$arch_suffix" "$pkgsinfodir/$munki_name-$fqos.plist"
     sed -i.tmp \
         -e "s/root/misty/" \
         -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
@@ -322,6 +326,7 @@ preloader() {
     log_message "stdout" "Creating preloader for macOS $fqos"
     munkiimport -n --installer-type copy_from_dmg \
     --name="$munki_name"_pre \
+    ${=arch_flags} \
     -c "$munki_catalog" \
     --category="$munki_category" \
     --developer=Apple \
@@ -336,9 +341,9 @@ preloader() {
     --subdirectory="$munki_path" \
     --unattended_install \
     --unattended_uninstall \
-    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null
+    --pkgvers="$fqos" "$pkgsdir/$munki_name-$fqos.dmg" > /dev/null < /dev/null
     sleep 20 # wait for plist to be created
-    mv "$pkgsinfodir/${munki_name}_pre-$fqos" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
+    mv "$pkgsinfodir/${munki_name}_pre-$fqos$arch_suffix" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     sed -i.tmp -e "s/root/misty/" "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     # Retrieve installable_condition from munkiimport_macos and fill in
     if [[ $localization == "yes" ]]; then
@@ -348,7 +353,7 @@ preloader() {
         awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/${munki_name}_pre-$fqos.plist" >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
         sed "s/%version%/$fqos/g" "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
+    install_condition=$(grep 'device_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
     install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/${munki_name}_pre-$fqos.plist")
     head -n "$install_hash" "$pkgsinfodir/${munki_name}_pre-$fqos.plist" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
     echo '	<key>installable_condition</key>' >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
@@ -376,12 +381,14 @@ rm_color_codes() {
 
 rm_previous_files() {
     setopt nullglob
-    if ! ls -1 "${pkgsdir}/${munki_name}-${os_major}"* >/dev/null 2>&1; then
+    local major_matches=("${pkgsdir}/${munki_name}-${os_major}"*)
+    if (( ${#major_matches[@]} == 0 )); then
         log_message "stdout" "No files matching $munki_name version $os_major found. Not removing any files."
         return
     fi
 
-    if  ls -1 "${pkgsdir}/${munki_name}-${fqos}"* >/dev/null 2>&1; then
+    local current_matches=("${pkgsdir}/${munki_name}-${fqos}"*)
+    if (( ${#current_matches[@]} > 0 )); then
         log_message "stdout" "The current version is already present in the repo, it will be overwritten."
     fi
 
@@ -552,9 +559,9 @@ echo "RepoName: $RepoName" > /dev/null
 echo "munki_path: $munki_path" > /dev/null
 echo "munki_name: $munki_name" > /dev/null
 echo "deploy_name: $deploy_name" > /dev/null
-echo "munki_catalog_14: $munki_catalog_14" > /dev/null
 echo "munki_catalog_15: $munki_catalog_15" > /dev/null
 echo "munki_catalog_26: $munki_catalog_26" > /dev/null
+echo "munki_catalog_27: $munki_catalog_27" > /dev/null
 echo "munki_category: $munki_category" > /dev/null
 echo "time_input: $time_input" > /dev/null
 echo "localization: $localization" > /dev/null
@@ -584,17 +591,25 @@ RepoOwner=$(stat -f "%Su" "$RepoPath")
 ################################################################################
 
 # We want to check each major version seperately
+mist list installer --compatible --latest "macOS Golden Gate" | grep GB > "$LogPath/tmp_state_27.txt"
 mist list installer --compatible --latest "macOS Tahoe" | grep GB > "$LogPath/tmp_state_26.txt"
 mist list installer --compatible --latest "macOS Sequoia" | grep GB > "$LogPath/tmp_state_15.txt"
-mist list installer --compatible --latest "macOS Sonoma" | grep GB > "$LogPath/tmp_state_14.txt"
 
 # Remove color codes resulting from grep and clean up
+rm_color_codes "$LogPath/tmp_state_27.txt" > "$LogPath/current_state_27.txt"
 rm_color_codes "$LogPath/tmp_state_26.txt" > "$LogPath/current_state_26.txt"
 rm_color_codes "$LogPath/tmp_state_15.txt" > "$LogPath/current_state_15.txt"
-rm_color_codes "$LogPath/tmp_state_14.txt" > "$LogPath/current_state_14.txt"
 /bin/rm -f "$LogPath/tmp_state_*.txt"
 
 # Compare the content with the previous state if present, ignoring last two columns (date and compatibliity)
+if [ -f "$LogPath/previous_state_27.txt" ]; then
+    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_27.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_27.txt"); then
+        macos_27=$(extract_macos_version "Golden Gate" "$LogPath/current_state_27.txt")
+    fi
+else
+    macos_27=$(extract_macos_version "Golden Gate" "$LogPath/current_state_27.txt")
+fi
+
 if [ -f "$LogPath/previous_state_26.txt" ]; then
     if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_26.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_26.txt"); then
         macos_26=$(extract_macos_version Tahoe "$LogPath/current_state_26.txt")
@@ -611,14 +626,6 @@ else
     macos_15=$(extract_macos_version Sequoia "$LogPath/current_state_15.txt")
 fi
 
-if [ -f "$LogPath/previous_state_14.txt" ]; then
-    if ! awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/current_state_14.txt" | cmp -s - <(awk '{ for(i=2;i<=NF-4;i++) printf "%s ", $i; print "" }' "$LogPath/previous_state_14.txt"); then
-        macos_14=$(extract_macos_version Sonoma "$LogPath/current_state_14.txt")
-    fi
-else
-    macos_14=$(extract_macos_version Sonoma "$LogPath/current_state_14.txt")
-fi
-
 # Clean up tmp files
 rm -rf "$LogPath/tmp_state_*.txt"
 
@@ -627,6 +634,21 @@ rm -rf "$LogPath/tmp_state_*.txt"
 ################################################################################
 
 # Execute loops only if version has changed
+if [ -n "$macos_27" ]; then
+    fqos=$macos_27
+    munki_catalog=$munki_catalog_27
+    munki_mini=7.3
+    os_major="27"
+    os_maxi="26.99"
+    os_mini="11.0"
+    os_munki="golden_gate"
+    os_nice="Golden Gate"
+    arch_flags="--arch arm64" # Golden Gate only supports Apple Silicon
+    # munkiimport appends "-<arch>" to the pkginfo filename whenever exactly one
+    # --arch is given; keep this in sync with arch_flags above.
+    arch_suffix="-arm64"
+    repo_stuff
+fi
 if [ -n "$macos_26" ]; then
     fqos=$macos_26
     munki_catalog=$munki_catalog_26
@@ -636,6 +658,8 @@ if [ -n "$macos_26" ]; then
     os_mini="10.15"
     os_munki="tahoe"
     os_nice="Tahoe"
+    arch_flags="" # supports x86_64 and arm64, no --arch filter needed
+    arch_suffix=""
     repo_stuff
 fi
 if [ -n "$macos_15" ]; then
@@ -647,17 +671,8 @@ if [ -n "$macos_15" ]; then
     os_mini="10.13"
     os_munki="sequoia"
     os_nice="Sequoia"
-    repo_stuff
-fi
-if [ -n "$macos_14" ]; then
-    fqos=$macos_14
-    munki_catalog=$munki_catalog_14
-    munki_mini=6.3.2
-    os_major="14"
-    os_maxi="13.99"
-    os_mini="10.13"
-    os_munki="sonoma"
-    os_nice="Sonoma"
+    arch_flags="" # supports x86_64 and arm64, no --arch filter needed
+    arch_suffix=""
     repo_stuff
 fi
 
@@ -666,7 +681,7 @@ fi
 ################################################################################
 
 # Only proceed if any new package(s) were created
-if [[ ( -n "$macos_14" || -n "$macos_15" || -n "$macos_26" ) ]]; then
+if [[ ( -n "$macos_15" || -n "$macos_26" || -n "$macos_27" ) ]]; then
     # Ensure correct permissions in full misty path
     munki_path="${munki_path%/}" # Remove trailing slash if present
     IFS="/" read -A subdirs <<< "$munki_path" # Split munki_path into its components (subdirectories)

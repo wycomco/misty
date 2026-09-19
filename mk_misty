@@ -11,6 +11,12 @@ if [ -d "$TMP_DIR" ]; then
   rm -rf "$TMP_DIR"
 fi
 
+swiftpkg_bin=$(which swiftpkg)
+if [ $? -ne 0 ]; then
+    echo "Error: swiftpkg not found. Please check your swiftpkg installation."
+    exit 1
+fi
+
 git clone "$REPO_URL" "$TMP_DIR"
 if [ $? -ne 0 ]; then
   echo "Failed to clone repository."
@@ -24,13 +30,13 @@ echo "Current version of misty is $VERSION"
 echo "Replacing version in build-info.plist..."
 sed -E -i '' "s/[0-9]+.[0-9]+.[0-9]+/${VERSION}/g" misty/build-info.plist
 
-munkipkg misty
-munkipkg_success="$?"
+swiftpkg_bin misty
+swiftpkg_bin_success="$?"
 echo "Resetting version in build-info.plist..."
 sed -E -i '' "s/${VERSION}/0.0.0/g" misty/build-info.plist
 
-if [ "$munkipkg_success" -ne 0 ]; then
-  echo "munkipkg failed."
+if [ "$swiftpkg_bin_success" -ne 0 ]; then
+  echo "swiftpkg failed."
   cd "$ORIGINAL_DIR"  # Return to original directory
   exit 1
 fi
