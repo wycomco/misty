@@ -30,7 +30,7 @@ echo "Current version of misty is $VERSION"
 echo "Replacing version in build-info.plist..."
 sed -E -i '' "s/[0-9]+.[0-9]+.[0-9]+/${VERSION}/g" misty/build-info.plist
 
-swiftpkg_bin misty
+"$swiftpkg_bin" misty
 swiftpkg_bin_success="$?"
 echo "Resetting version in build-info.plist..."
 sed -E -i '' "s/${VERSION}/0.0.0/g" misty/build-info.plist
