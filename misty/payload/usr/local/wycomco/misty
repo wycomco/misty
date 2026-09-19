@@ -182,7 +182,7 @@ deploy_macos() {
         awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/$deploy_name-$fqos.plist" >> "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
         sed "s/%version%/$fqos/g" "$pkgsinfodir/$deploy_name-$fqos.plist.tmp" > "$pkgsinfodir/$deploy_name-$fqos.plist"
     fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
+    install_condition=$(grep 'device_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
     install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/$deploy_name-$fqos.plist")
     head -n "$install_hash" "$pkgsinfodir/$deploy_name-$fqos.plist" > "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
     echo '	<key>installable_condition</key>' >> "$pkgsinfodir/$deploy_name-$fqos.plist.tmp"
@@ -353,7 +353,7 @@ preloader() {
         awk -v localized="${localized}" 'NR > localized' "$pkgsinfodir/${munki_name}_pre-$fqos.plist" >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
         sed "s/%version%/$fqos/g" "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist"
     fi
-    install_condition=$(grep '<string>board_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
+    install_condition=$(grep 'device_id IN {' "$pkgsinfodir/$munki_name-$fqos.plist")
     install_hash=$(awk '/<key>installer_item_hash<\/key>/ {print NR-1; exit}' "$pkgsinfodir/${munki_name}_pre-$fqos.plist")
     head -n "$install_hash" "$pkgsinfodir/${munki_name}_pre-$fqos.plist" > "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"
     echo '	<key>installable_condition</key>' >> "$pkgsinfodir/${munki_name}_pre-$fqos.plist.tmp"

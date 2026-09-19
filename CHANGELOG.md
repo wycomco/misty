@@ -14,6 +14,8 @@
 - Extraction of macOS version from `mist-cli` output now ignores optional major version prefix – [PR#36](https://github.com/wycomco/misty/pull/36)
 - Ignore question for product icon – [PR#36](https://github.com/wycomco/misty/pull/36)
 - `munkipkg` is replaced by `swiftpkg` in the build mechanism – [PR#33](https://github.com/wycomco/misty/pull/33)
+- Fix the check for current major version and current patch version – [PR#38](https://github.com/wycomco/misty/pull/38)
+- Look for `device_id` (ARM) instead of `board_id` (intel) string for copying installable_condition
 
 
 ## [0.2.7](https://github.com/wycomco/misty/releases/tag/v0.2.7) – 2026-02-10
