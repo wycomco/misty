@@ -6,6 +6,12 @@
 No unreleased changes.
 
 
+## [0.2.9](https://github.com/wycomco/misty/releases/tag/v0.2.9) – 2026-11-13
+
+### Fixed
+- Identifiers in `installable_condition` get quoted – [PR#40](https://github.com/wycomco/misty/pull/40)
+
+
 ## [0.2.8](https://github.com/wycomco/misty/releases/tag/v0.2.8) – 2026-09-19
 
 ### Added
