@@ -306,6 +306,10 @@ munkiimport_stage_os() {
         -e "s/root/misty/" \
         -e "s/Installs macOS $os_nice, version $fqos/Installs macOS $os_nice $fqos/" \
         -e 's/installable_condition_disabled/installable_condition/g' \
+        -e '/<key>installable_condition<\/key>/{' \
+        -e 'n' \
+        -e 's/\([{ ]\)\([^ ,{}"]\{1,\}\)\([,}]\)/\1"\2"\3/g' \
+        -e '}' \
         -e "s|$munki_path/Install macOS $os_nice-$fqos.dmg|$munki_path/$munki_name-$fqos.dmg|g" \
         "$pkgsinfodir/$munki_name-$fqos.plist"
     if [[ $localization == "yes" ]]; then
